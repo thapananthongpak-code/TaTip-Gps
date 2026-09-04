@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/BigButton'
+import { AppearancePanel } from '@/components/AppearancePanel'
 import { GpsStatusPanel } from '@/components/GpsStatusPanel'
 import { LanguageToggle } from '@/components/LanguageToggle'
+import { OfflineBanner } from '@/components/OfflineBanner'
 import { MapControls } from '@/components/MapControls'
 import { MapView } from '@/components/MapView'
 import { NavigationPanel } from '@/components/NavigationPanel'
@@ -10,6 +12,8 @@ import { PermissionGate } from '@/components/PermissionGate'
 import { SafetyPanel } from '@/components/SafetyPanel'
 import { SearchPanel } from '@/components/SearchPanel'
 import { SharedLocationView } from '@/components/SharedLocationView'
+import { UpdatePrompt } from '@/components/UpdatePrompt'
+import { useAppearance } from '@/hooks/useAppearance'
 import { useEmergency } from '@/hooks/useEmergency'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { useGpsAnnouncer } from '@/hooks/useGpsAnnouncer'
@@ -17,6 +21,7 @@ import { useHazardAlerts } from '@/hooks/useHazardAlerts'
 import { useLiveShare } from '@/hooks/useLiveShare'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useNavigationAnnouncer } from '@/hooks/useNavigationAnnouncer'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useSettings } from '@/hooks/useSettings'
 import { useShareRoute } from '@/hooks/useShareRoute'
 import { useSpeech } from '@/hooks/useSpeech'
@@ -38,9 +43,12 @@ export default function App() {
   const [started, setStarted] = useState(false)
   const [follow, setFollow] = useState(true)
   const [showSafety, setShowSafety] = useState(false)
+  const [showAppearance, setShowAppearance] = useState(false)
 
   const shareRoute = useShareRoute()
   const settings = useSettings()
+  useAppearance(settings.settings)
+  const isOnline = useOnlineStatus(started)
   const geo = useGeolocation()
   const nav = useNavigation(geo.position)
   const whereAmI = useWhereAmI(geo.position)
@@ -144,6 +152,13 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+      <a href="#main-controls" className="skip-link">
+        {t('a11y.skipToMain')}
+      </a>
+
+      <UpdatePrompt />
+      {!isOnline && <OfflineBanner />}
+
       <header className="flex items-center justify-between gap-3 bg-brand-600 px-4 py-3 text-white">
         <div>
           <h1 className="text-xl font-bold">{t('app.title')}</h1>
@@ -152,80 +167,109 @@ export default function App() {
         <LanguageToggle />
       </header>
 
-      {!started ? (
-        <PermissionGate onStart={handleStart} speechSupported={speechSupported} />
-      ) : (
-        <>
-          <div className="relative flex-1">
-            <MapView
-              position={geo.position}
-              isPoorAccuracy={geo.isPoorAccuracy}
-              isStale={geo.isStale}
-              follow={follow}
-              onUserPan={() => setFollow(false)}
-              route={nav.route}
-            />
-            <MapControls
-              follow={follow}
-              onRecenter={handleRecenter}
-              disabled={geo.position === null}
-            />
-          </div>
-
-          <div className="max-h-[55%] overflow-y-auto">
-            {isNavigating ? (
-              <NavigationPanel nav={nav} onRepeat={handleRepeatInstruction} />
-            ) : (
-              <SearchPanel position={geo.position} onSelect={handleSelectPlace} />
-            )}
-
-            <div className="border-t-2 border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-              <BigButton
-                variant="secondary"
-                onClick={whereAmI.announce}
-                disabled={whereAmI.isLoading}
-                className="w-full"
-              >
-                {t('whereAmI.button')}
-              </BigButton>
-              <BigButton
-                variant="secondary"
-                onClick={() => setShowSafety((prev) => !prev)}
-                aria-expanded={showSafety}
-                aria-controls="safety-panel"
-                className="mt-2 w-full"
-              >
-                {showSafety ? t('settings.closeSettings') : t('settings.openSettings')}
-              </BigButton>
-              {/* แสดงที่อยู่เต็มไว้ให้อ่าน ส่วนที่พูดออกเสียงเป็นฉบับย่อ */}
-              {whereAmI.address && (
-                <p aria-live="polite" className="mt-2 text-base text-slate-700 dark:text-slate-200">
-                  {whereAmI.address}
-                </p>
-              )}
+      {/* ครอบเนื้อหาหลักด้วย main หนึ่งอัน เพื่อให้ screen reader ข้ามส่วนหัวได้ */}
+      <main className="flex flex-1 flex-col overflow-hidden">
+        {!started ? (
+          <PermissionGate onStart={handleStart} speechSupported={speechSupported} />
+        ) : (
+          <>
+            <div className="relative flex-1">
+              <MapView
+                position={geo.position}
+                isPoorAccuracy={geo.isPoorAccuracy}
+                isStale={geo.isStale}
+                follow={follow}
+                onUserPan={() => setFollow(false)}
+                route={nav.route}
+              />
+              <MapControls
+                follow={follow}
+                onRecenter={handleRecenter}
+                disabled={geo.position === null}
+              />
             </div>
 
-            {showSafety && (
-              <div id="safety-panel">
-                <SafetyPanel
-                  settings={settings}
-                  onSos={handleSos}
-                  hasPosition={geo.position !== null}
-                  share={{
-                    isSharing: liveShare.isSharing,
-                    expiresAt: liveShare.session?.expiresAt ?? null,
-                    onStart: () => void liveShare.start(),
-                    onSendUpdate: () => void liveShare.sendUpdate(),
-                    onStop: liveShare.stop,
-                  }}
+            <section
+              id="main-controls"
+              aria-label={t('a11y.mainLabel')}
+              className="max-h-[55%] overflow-y-auto"
+            >
+              {isNavigating ? (
+                <NavigationPanel nav={nav} onRepeat={handleRepeatInstruction} />
+              ) : (
+                <SearchPanel
+                  position={geo.position}
+                  onSelect={handleSelectPlace}
+                  isOnline={isOnline}
                 />
-              </div>
-            )}
+              )}
 
-            <GpsStatusPanel geo={geo} onRepeatStatus={handleRepeatStatus} />
-          </div>
-        </>
-      )}
+              <div className="border-t-2 border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <BigButton
+                  variant="secondary"
+                  onClick={whereAmI.announce}
+                  disabled={whereAmI.isLoading}
+                  className="w-full"
+                >
+                  {t('whereAmI.button')}
+                </BigButton>
+                <BigButton
+                  variant="secondary"
+                  onClick={() => setShowSafety((prev) => !prev)}
+                  aria-expanded={showSafety}
+                  aria-controls="safety-panel"
+                  className="mt-2 w-full"
+                >
+                  {showSafety ? t('settings.closeSettings') : t('settings.openSettings')}
+                </BigButton>
+                <BigButton
+                  variant="secondary"
+                  onClick={() => setShowAppearance((prev) => !prev)}
+                  aria-expanded={showAppearance}
+                  aria-controls="appearance-panel"
+                  className="mt-2 w-full"
+                >
+                  {showAppearance ? t('appearance.closePanel') : t('appearance.openPanel')}
+                </BigButton>
+                {/* แสดงที่อยู่เต็มไว้ให้อ่าน ส่วนที่พูดออกเสียงเป็นฉบับย่อ */}
+                {whereAmI.address && (
+                  <p
+                    aria-live="polite"
+                    className="mt-2 text-base text-slate-700 dark:text-slate-200"
+                  >
+                    {whereAmI.address}
+                  </p>
+                )}
+              </div>
+
+              {showSafety && (
+                <div id="safety-panel">
+                  <SafetyPanel
+                    settings={settings}
+                    onSos={handleSos}
+                    hasPosition={geo.position !== null}
+                    share={{
+                      isSharing: liveShare.isSharing,
+                      expiresAt: liveShare.session?.expiresAt ?? null,
+                      onStart: () => void liveShare.start(),
+                      onSendUpdate: () => void liveShare.sendUpdate(),
+                      onStop: liveShare.stop,
+                    }}
+                  />
+                </div>
+              )}
+
+              {showAppearance && (
+                <div id="appearance-panel">
+                  <AppearancePanel settings={settings} />
+                </div>
+              )}
+
+              <GpsStatusPanel geo={geo} onRepeatStatus={handleRepeatStatus} />
+            </section>
+          </>
+        )}
+      </main>
     </div>
   )
 }

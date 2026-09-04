@@ -211,5 +211,38 @@
     "clearDataConfirmSpoken": "Confirm deleting all emergency contacts and settings. Tap the same button again within five seconds to confirm, or wait to cancel.",
     "clearDataDoneSpoken": "Contacts and settings have been deleted. Your language choice is kept.",
     "clearDataNote": "Your language choice is kept, and the app never stored any location history anyway."
+  },
+  "offline": {
+    "banner": "No internet — the map you already loaded still works, but searching and new routes do not",
+    "lostSpoken": "Internet connection lost. The map you already loaded still works, but searching for places and calculating new routes will not work until you are back online.",
+    "restoredSpoken": "Internet connection restored. All features are available again.",
+    "searchUnavailable": "Search is unavailable while offline"
+  },
+  "update": {
+    "title": "New version available",
+    "available": "A new version of the app is ready",
+    "reload": "Update now",
+    "later": "Later"
+  },
+  "appearance": {
+    "title": "Display",
+    "fontSize": "Text size",
+    "fontScale": {
+      "normal": "Normal",
+      "large": "Large",
+      "x-large": "Extra large"
+    },
+    "theme": "Colour theme",
+    "themeOption": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "openPanel": "Display settings",
+    "closePanel": "Close display settings"
+  },
+  "a11y": {
+    "skipToMain": "Skip to main controls",
+    "mainLabel": "Main controls"
   }
 }

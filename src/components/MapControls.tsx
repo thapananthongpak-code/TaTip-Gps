@@ -20,7 +20,7 @@ export function MapControls({ follow, onRecenter, disabled }: Props) {
         disabled={disabled}
         aria-pressed={follow}
         aria-label={t('map.recenter')}
-        className="pointer-events-auto flex min-h-touch min-w-touch cursor-pointer items-center gap-2 rounded-2xl bg-white px-4 py-3 text-base font-bold text-slate-900 shadow-lg ring-2 ring-slate-400 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-500"
+        className="pointer-events-auto flex min-h-touch min-w-touch cursor-pointer items-center gap-2 rounded-2xl bg-white px-4 py-3 text-base font-bold text-slate-900 shadow-lg ring-2 ring-slate-500 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-50 dark:ring-slate-400"
       >
         <span aria-hidden="true">◎</span>
         {t('map.recenter')}

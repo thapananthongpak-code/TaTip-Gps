@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react'
 import { settingsService } from '@/services'
-import type { AppSettings, EmergencyContact } from '@/types'
+import type { AppSettings, EmergencyContact, FontScale, ThemePreference } from '@/types'
 
 export interface UseSettingsResult {
   settings: AppSettings
+  setFontScale: (scale: FontScale) => void
+  setTheme: (theme: ThemePreference) => void
   setVibrationEnabled: (enabled: boolean) => void
   setHazardAlertsEnabled: (enabled: boolean) => void
   addContact: (name: string, phone: string) => void
@@ -23,6 +25,16 @@ export function useSettings(): UseSettingsResult {
     setSettings(next)
     settingsService.save(next)
   }, [])
+
+  const setFontScale = useCallback(
+    (fontScale: FontScale) => update({ ...settings, fontScale }),
+    [settings, update],
+  )
+
+  const setTheme = useCallback(
+    (theme: ThemePreference) => update({ ...settings, theme }),
+    [settings, update],
+  )
 
   const setVibrationEnabled = useCallback(
     (vibrationEnabled: boolean) => update({ ...settings, vibrationEnabled }),
@@ -62,6 +74,8 @@ export function useSettings(): UseSettingsResult {
 
   return {
     settings,
+    setFontScale,
+    setTheme,
     setVibrationEnabled,
     setHazardAlertsEnabled,
     addContact,

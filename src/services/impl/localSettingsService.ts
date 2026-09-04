@@ -1,8 +1,18 @@
 import type { SettingsService } from '@/services/interfaces'
 import { DEFAULT_SETTINGS } from '@/types'
-import type { AppSettings, EmergencyContact } from '@/types'
+import type { AppSettings, EmergencyContact, FontScale, ThemePreference } from '@/types'
 
 const STORAGE_KEY = 'taathip.settings'
+
+const FONT_SCALES: FontScale[] = ['normal', 'large', 'x-large']
+const THEMES: ThemePreference[] = ['system', 'light', 'dark']
+
+/** รับค่าเฉพาะที่อยู่ในชุดที่รู้จัก ค่าอื่นถือว่าข้อมูลเสียแล้วใช้ค่าเริ่มต้นแทน */
+function oneOf<T extends string>(value: unknown, allowed: T[], fallback: T): T {
+  return typeof value === 'string' && (allowed as string[]).includes(value)
+    ? (value as T)
+    : fallback
+}
 
 /** ตรวจรูปร่างข้อมูลที่อ่านมาจาก localStorage ก่อนใช้ กันข้อมูลเก่า/เสียหายทำแอปพัง */
 function parseContacts(value: unknown): EmergencyContact[] {
@@ -32,6 +42,8 @@ export const localSettingsService: SettingsService = {
       const data = parsed as Record<string, unknown>
 
       return {
+        fontScale: oneOf(data.fontScale, FONT_SCALES, DEFAULT_SETTINGS.fontScale),
+        theme: oneOf(data.theme, THEMES, DEFAULT_SETTINGS.theme),
         vibrationEnabled:
           typeof data.vibrationEnabled === 'boolean'
             ? data.vibrationEnabled

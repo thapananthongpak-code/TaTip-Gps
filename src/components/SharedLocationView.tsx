@@ -95,7 +95,7 @@ export function SharedLocationView({ payload }: Props) {
           href={`https://www.openstreetmap.org/?mlat=${payload.position.lat}&mlon=${payload.position.lng}#map=18/${payload.position.lat}/${payload.position.lng}`}
           target="_blank"
           rel="noreferrer"
-          className="mt-3 flex min-h-touch items-center justify-center rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg font-bold dark:border-slate-500"
+          className="mt-3 flex min-h-touch items-center justify-center rounded-2xl border-2 border-slate-500 px-4 py-3 text-lg font-bold dark:border-slate-400"
         >
           {t('sharedView.openInMaps')}
         </a>

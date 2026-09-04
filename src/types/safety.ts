@@ -41,8 +41,16 @@ export interface SharePayload {
   }
 }
 
+/** ขนาดตัวอักษรที่ผู้ใช้ปรับได้ — สำคัญมากสำหรับผู้ที่สายตาเลือนราง */
+export type FontScale = 'normal' | 'large' | 'x-large'
+
+/** ธีมสี — 'system' คือตามการตั้งค่าของเครื่อง */
+export type ThemePreference = 'system' | 'light' | 'dark'
+
 /** ค่าตั้งค่าทั้งหมดของแอป เก็บบนเครื่องผู้ใช้ */
 export interface AppSettings {
+  fontScale: FontScale
+  theme: ThemePreference
   /** เปิดการสั่นเตือนควบคู่กับเสียง */
   vibrationEnabled: boolean
   /** เปิดการเตือนจุดเสี่ยงบนเส้นทาง */
@@ -51,6 +59,8 @@ export interface AppSettings {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  fontScale: 'normal',
+  theme: 'system',
   vibrationEnabled: true,
   hazardAlertsEnabled: true,
   emergencyContacts: [],

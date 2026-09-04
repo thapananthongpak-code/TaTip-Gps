@@ -10,10 +10,12 @@ import { BigButton } from './BigButton'
 interface Props {
   position: GeoPosition | null
   onSelect: (place: Place) => void
+  /** ค้นหาต้องใช้อินเทอร์เน็ต ตอนออฟไลน์จึงปิดช่องกรอกและบอกเหตุผลให้ชัด */
+  isOnline: boolean
 }
 
 /** ช่องค้นหาจุดหมาย + รายการผลลัพธ์ที่กดเลือกได้ */
-export function SearchPanel({ position, onSelect }: Props) {
+export function SearchPanel({ position, onSelect, isOnline }: Props) {
   const { t } = useTranslation()
   const inputId = useId()
   const { query, setQuery, results, isSearching, error, isEmpty, clear } = useSearch(position)
@@ -49,9 +51,10 @@ export function SearchPanel({ position, onSelect }: Props) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('search.placeholder')}
+          disabled={!isOnline}
           aria-describedby={`${inputId}-hint`}
           autoComplete="off"
-          className="min-h-touch flex-1 rounded-xl border-2 border-slate-400 px-4 py-3 text-lg dark:border-slate-500 dark:bg-slate-800"
+          className="min-h-touch flex-1 rounded-xl border-2 border-slate-500 px-4 py-3 text-lg dark:border-slate-400 dark:bg-slate-800"
         />
         {query && (
           <BigButton variant="secondary" onClick={clear} aria-label={t('search.clear')}>
@@ -61,14 +64,15 @@ export function SearchPanel({ position, onSelect }: Props) {
       </div>
 
       <p id={`${inputId}-hint`} className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-        {t('search.hint')}
+        {isOnline ? t('search.hint') : t('offline.searchUnavailable')}
       </p>
 
       {/* ประกาศสถานะการค้นหาให้ screen reader โดยไม่ต้องย้ายโฟกัส */}
       <p aria-live="polite" className="mt-2 text-base font-bold">
-        {isSearching && t('search.searching')}
-        {!isSearching && error && t(`errors.${error.code}`)}
-        {!isSearching && !error && isEmpty && t('search.noResults')}
+        {!isOnline && t('offline.searchUnavailable')}
+        {isOnline && isSearching && t('search.searching')}
+        {isOnline && !isSearching && error && t(`errors.${error.code}`)}
+        {isOnline && !isSearching && !error && isEmpty && t('search.noResults')}
       </p>
 
       {results.length > 0 && (
@@ -80,7 +84,7 @@ export function SearchPanel({ position, onSelect }: Props) {
                 <button
                   type="button"
                   onClick={() => onSelect(place)}
-                  className="min-h-touch w-full cursor-pointer rounded-xl border-2 border-slate-300 p-3 text-left hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+                  className="min-h-touch w-full cursor-pointer rounded-xl border-2 border-slate-500 p-3 text-left hover:bg-slate-100 dark:border-slate-400 dark:hover:bg-slate-800"
                 >
                   <span className="block text-lg font-bold">{place.name}</span>
                   <span className="block text-sm text-slate-600 dark:text-slate-300">

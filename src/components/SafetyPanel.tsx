@@ -95,7 +95,7 @@ function ContactForm({ onAdd }: { onAdd: (name: string, phone: string) => void }
         value={name}
         onChange={(e) => setName(e.target.value)}
         autoComplete="name"
-        className="min-h-touch rounded-xl border-2 border-slate-400 px-4 py-2 text-lg dark:border-slate-500 dark:bg-slate-800"
+        className="min-h-touch rounded-xl border-2 border-slate-500 px-4 py-2 text-lg dark:border-slate-400 dark:bg-slate-800"
       />
 
       <label className="text-base font-bold" htmlFor="contact-phone">
@@ -108,7 +108,7 @@ function ContactForm({ onAdd }: { onAdd: (name: string, phone: string) => void }
         type="tel"
         inputMode="tel"
         autoComplete="tel"
-        className="min-h-touch rounded-xl border-2 border-slate-400 px-4 py-2 text-lg dark:border-slate-500 dark:bg-slate-800"
+        className="min-h-touch rounded-xl border-2 border-slate-500 px-4 py-2 text-lg dark:border-slate-400 dark:bg-slate-800"
       />
 
       <BigButton type="submit" disabled={!canSubmit}>
@@ -129,7 +129,7 @@ function ContactRow({
 }) {
   const { t } = useTranslation()
   return (
-    <li className="flex items-center gap-2 rounded-xl border-2 border-slate-300 p-2 dark:border-slate-600">
+    <li className="flex items-center gap-2 rounded-xl border-2 border-slate-500 p-2 dark:border-slate-400">
       <span className="flex-1">
         <span className="block text-lg font-bold">{contact.name}</span>
         <span className="block text-sm text-slate-600 dark:text-slate-300">{contact.phone}</span>
