@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { currentLanguage } from '@/i18n'
 import { SEARCH_DEBOUNCE_MS, geocodingService } from '@/services'
 import { ServiceError } from '@/types'
 import type { LatLng, Place } from '@/types'
@@ -81,6 +82,8 @@ export function useSearch(near: LatLng | null): UseSearchResult {
           near: nearRef.current ?? undefined,
           signal: controller.signal,
           limit: 5,
+          // ขอผลลัพธ์เป็นภาษาเดียวกับที่ผู้ใช้เลือกไว้
+          language: currentLanguage(),
         })
         if (controller.signal.aborted) return
         setResults(found)

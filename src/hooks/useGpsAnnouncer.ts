@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { msg } from '@/i18n/messages'
+import { useTranslation } from 'react-i18next'
 import type { UseGeolocationResult } from './useGeolocation'
 import { useSpeech } from './useSpeech'
 
@@ -15,6 +15,7 @@ const POOR_ACCURACY_REPEAT_MS = 60_000
  * กติกา: พูดเฉพาะตอน "เปลี่ยนสถานะ" เท่านั้น ไม่พูดซ้ำทุก tick ของ watchPosition
  */
 export function useGpsAnnouncer(geo: UseGeolocationResult, enabled: boolean) {
+  const { t } = useTranslation()
   const { speak } = useSpeech()
 
   const prevStatus = useRef(geo.status)
@@ -29,28 +30,28 @@ export function useGpsAnnouncer(geo: UseGeolocationResult, enabled: boolean) {
 
     // 1) เริ่มค้นหาตำแหน่ง
     if (geo.status === 'acquiring' && prevStatus.current !== 'acquiring') {
-      speak(msg.gps.acquiringSpoken)
+      speak(t('gps.acquiringSpoken'))
     }
 
     // 2) ได้ตำแหน่งแรก
     if (geo.status === 'tracking' && !hasAnnouncedFirstFix.current && geo.position) {
       hasAnnouncedFirstFix.current = true
-      speak(msg.gps.foundSpoken)
+      speak(t('gps.foundSpoken'))
     }
     if (geo.status === 'idle') hasAnnouncedFirstFix.current = false
 
     prevStatus.current = geo.status
-  }, [enabled, geo.status, geo.position, speak])
+  }, [enabled, geo.status, geo.position, speak, t])
 
   // 3) ข้อผิดพลาด — สำคัญที่สุด ต้องตัดคิวพูดทันที ไม่ปล่อยให้ผู้ใช้เดินต่อโดยไม่รู้ว่าระบบหยุด
   useEffect(() => {
     if (!enabled) return
     const code = geo.error?.code ?? null
     if (code && code !== prevErrorCode.current) {
-      speak(msg.errors[`${code}_SPOKEN`], { priority: 'critical' })
+      speak(t(`errors.${code}_SPOKEN`), { priority: 'critical' })
     }
     prevErrorCode.current = code
-  }, [enabled, geo.error, speak])
+  }, [enabled, geo.error, speak, t])
 
   // 4) ความแม่นยำต่ำ / กลับมาแม่นยำ
   useEffect(() => {
@@ -62,23 +63,23 @@ export function useGpsAnnouncer(geo: UseGeolocationResult, enabled: boolean) {
       const canRepeat = now - lastPoorSpokenAt.current > POOR_ACCURACY_REPEAT_MS
       if (isNew || canRepeat) {
         lastPoorSpokenAt.current = now
-        speak(msg.gps.poorAccuracySpoken(Math.round(geo.position.accuracy)), {
+        speak(t('gps.poorAccuracySpoken', { meters: Math.round(geo.position.accuracy) }), {
           priority: 'critical',
         })
       }
     } else if (prevPoor.current) {
-      speak(msg.gps.recoveredSpoken)
+      speak(t('gps.recoveredSpoken'))
     }
 
     prevPoor.current = geo.isPoorAccuracy
-  }, [enabled, geo.isPoorAccuracy, geo.position, speak])
+  }, [enabled, geo.isPoorAccuracy, geo.position, speak, t])
 
   // 5) สัญญาณขาดหายกลางทาง (ตำแหน่งค้าง) — เตือนว่าที่เห็นอยู่อาจเป็นตำแหน่งเก่า
   useEffect(() => {
     if (!enabled) return
     if (geo.isStale && !prevStale.current && geo.status !== 'idle') {
-      speak(msg.gps.staleSpoken, { priority: 'critical' })
+      speak(t('gps.staleSpoken'), { priority: 'critical' })
     }
     prevStale.current = geo.isStale
-  }, [enabled, geo.isStale, geo.status, speak])
+  }, [enabled, geo.isStale, geo.status, speak, t])
 }

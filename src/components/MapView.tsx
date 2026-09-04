@@ -1,7 +1,7 @@
 import L from 'leaflet'
 import { useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from 'react-leaflet'
-import { msg } from '@/i18n/messages'
 import { mapService } from '@/services'
 import type { GeoPosition, Route } from '@/types'
 import { CurrentPositionMarker } from './CurrentPositionMarker'
@@ -62,6 +62,7 @@ function UserPanWatcher({ onUserPan }: { onUserPan: () => void }) {
  * เพื่อให้เปลี่ยนผู้ให้บริการแผนที่ได้โดยไม่ต้องแก้ component
  */
 export function MapView({ position, isPoorAccuracy, isStale, follow, onUserPan, route }: Props) {
+  const { t } = useTranslation()
   const tiles = mapService.getTileConfig()
   const fallbackCenter = mapService.getDefaultCenter()
   const center = position ?? fallbackCenter
@@ -70,7 +71,7 @@ export function MapView({ position, isPoorAccuracy, isStale, follow, onUserPan, 
     // ต้องครอบด้วย div ที่มี label เอง เพราะ MapContainer ของ react-leaflet
     // ไม่ส่ง aria-* ต่อไปยัง element จริง (ดู MapContainerProps)
     // แผนที่เป็นข้อมูลเชิงภาพเสริม ข้อมูลหลักทั้งหมดอยู่ในแผงสถานะที่อ่านออกเสียงได้
-    <div role="region" aria-label={msg.map.label} className="h-full w-full">
+    <div role="region" aria-label={t('map.label')} className="h-full w-full">
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={mapService.getDefaultZoom()}

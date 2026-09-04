@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { msg } from '@/i18n/messages'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import type { RouteStep } from '@/types'
 import { speakDistance } from '@/utils/format'
 import { ARRIVAL_RADIUS_M } from '@/utils/navigation'
@@ -14,12 +15,19 @@ import { useSpeech } from './useSpeech'
 const ANNOUNCE_AT_METERS = [100, 50, 20, 8] as const
 
 /** สร้างประโยคบอกทางจากขั้นตอนถัดไป */
-function instructionFor(step: RouteStep, distance: number): string {
-  const maneuverText = msg.maneuver[step.maneuver]
+function instructionFor(t: TFunction, step: RouteStep, distance: number): string {
+  const maneuver = t(`maneuver.${step.maneuver}`)
   if (step.maneuver === 'arrive') {
-    return msg.nav.approaching(speakDistance(distance), msg.maneuver.arrive)
+    return t('nav.approaching', { distance: speakDistance(distance), maneuver })
   }
-  return msg.nav.stepInstruction(speakDistance(distance), maneuverText, step.streetName)
+  // แยกคีย์ตามว่ามีชื่อถนนหรือไม่ เพราะโครงประโยคของสองภาษาต่างกัน
+  return step.streetName
+    ? t('nav.stepInstructionWithStreet', {
+        distance: speakDistance(distance),
+        maneuver,
+        street: step.streetName,
+      })
+    : t('nav.stepInstruction', { distance: speakDistance(distance), maneuver })
 }
 
 /**
@@ -32,6 +40,7 @@ function instructionFor(step: RouteStep, distance: number): string {
  *   เพื่อตัดคิวข้อความที่ไม่เร่งด่วนที่ค้างอยู่
  */
 export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolean) {
+  const { t } = useTranslation()
   const { speak } = useSpeech()
 
   const announcedRouteIdRef = useRef<string | null>(null)
@@ -46,10 +55,10 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
   useEffect(() => {
     if (!enabled) return
     if (nav.status === 'calculating' && prevStatusRef.current !== 'calculating') {
-      speak(msg.nav.calculatingSpoken)
+      speak(t('nav.calculatingSpoken'))
     }
     prevStatusRef.current = nav.status
-  }, [enabled, nav.status, speak])
+  }, [enabled, nav.status, speak, t])
 
   // 2) ได้เส้นทางใหม่ — สรุปภาพรวมก่อน แล้วค่อยบอกก้าวแรก
   useEffect(() => {
@@ -61,18 +70,18 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
     announcedThresholdsRef.current.clear()
 
     speak(
-      msg.nav.routeReadySpoken(
-        speakDistance(nav.route.distance),
-        Math.max(1, Math.round(nav.route.duration / 60)),
-        nav.route.destination.name,
-      ),
+      t('nav.routeReadySpoken', {
+        distance: speakDistance(nav.route.distance),
+        minutes: Math.max(1, Math.round(nav.route.duration / 60)),
+        destination: nav.route.destination.name,
+      }),
     )
 
     // เส้นทางจากบริการสำรองเป็นเส้นทางรถ ต้องเตือนก่อนที่ผู้ใช้จะก้าวออกไป
     if (nav.route.usedFallbackProfile) {
-      speak(msg.nav.fallbackWarningSpoken, { priority: 'normal' })
+      speak(t('nav.fallbackWarningSpoken'), { priority: 'normal' })
     }
-  }, [enabled, nav.route, nav.status, speak])
+  }, [enabled, nav.route, nav.status, speak, t])
 
   // 3) คำแนะนำแต่ละช่วง + เตือนก่อนถึงจุดเลี้ยว
   useEffect(() => {
@@ -86,7 +95,7 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
     if (announcedStepRef.current !== currentStepIndex) {
       announcedStepRef.current = currentStepIndex
       announcedThresholdsRef.current.clear()
-      speak(instructionFor(nextStep, distanceToNextManeuver))
+      speak(instructionFor(t, nextStep, distanceToNextManeuver))
       return
     }
 
@@ -101,14 +110,14 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
       if (m >= threshold) announcedThresholdsRef.current.add(m)
     }
 
-    const maneuverText = msg.maneuver[nextStep.maneuver]
+    const maneuver = t(`maneuver.${nextStep.maneuver}`)
     speak(
       threshold <= 8
-        ? msg.nav.maneuverNow(maneuverText)
-        : msg.nav.approaching(speakDistance(distanceToNextManeuver), maneuverText),
+        ? t('nav.maneuverNow', { maneuver })
+        : t('nav.approaching', { distance: speakDistance(distanceToNextManeuver), maneuver }),
       { priority: threshold <= 20 ? 'critical' : 'normal' },
     )
-  }, [enabled, nav.progress, nav.status, speak])
+  }, [enabled, nav.progress, nav.status, speak, t])
 
   // 4) ถึงจุดหมาย
   useEffect(() => {
@@ -117,38 +126,41 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
       const offset = nav.arrivalOffset ?? 0
       speak(
         offset > ARRIVAL_RADIUS_M
-          ? msg.nav.arrivedNearSpoken(nav.destination.name, speakDistance(offset))
-          : msg.nav.arrivedSpoken(nav.destination.name),
+          ? t('nav.arrivedNearSpoken', {
+              destination: nav.destination.name,
+              distance: speakDistance(offset),
+            })
+          : t('nav.arrivedSpoken', { destination: nav.destination.name }),
         { priority: 'critical' },
       )
     }
-  }, [enabled, nav.status, nav.destination, nav.arrivalOffset, speak])
+  }, [enabled, nav.status, nav.destination, nav.arrivalOffset, speak, t])
 
   // 5) ออกนอกเส้นทาง
   useEffect(() => {
     if (!enabled) return
     if (nav.isOffRoute && !prevOffRouteRef.current) {
-      speak(msg.nav.offRouteSpoken, { priority: 'critical' })
+      speak(t('nav.offRouteSpoken'), { priority: 'critical' })
     }
     prevOffRouteRef.current = nav.isOffRoute
-  }, [enabled, nav.isOffRoute, speak])
+  }, [enabled, nav.isOffRoute, speak, t])
 
   // 6) กำลังลองเรียก API ใหม่ — ผู้ใช้ต้องรู้ตอนที่ระบบสะดุด ไม่ใช่ตอนที่ยอมแพ้แล้ว
   useEffect(() => {
     if (!enabled) return
     if (nav.retryAttempt > 0 && prevRetryRef.current === 0) {
-      speak(msg.errors.retryingSpoken, { priority: 'critical' })
+      speak(t('errors.retryingSpoken'), { priority: 'critical' })
     }
     prevRetryRef.current = nav.retryAttempt
-  }, [enabled, nav.retryAttempt, speak])
+  }, [enabled, nav.retryAttempt, speak, t])
 
   // 7) ล้มเหลวถาวร — ต้องบอกให้หยุดเดินในที่ปลอดภัย ห้ามปล่อยให้เดินต่อโดยไม่รู้
   useEffect(() => {
     if (!enabled) return
     const code = nav.error?.code ?? null
     if (code && code !== prevErrorRef.current) {
-      speak(msg.errors[`${code}_SPOKEN`], { priority: 'critical' })
+      speak(t(`errors.${code}_SPOKEN`), { priority: 'critical' })
     }
     prevErrorRef.current = code
-  }, [enabled, nav.error, speak])
+  }, [enabled, nav.error, speak, t])
 }

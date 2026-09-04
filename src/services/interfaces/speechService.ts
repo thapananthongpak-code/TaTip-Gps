@@ -18,6 +18,12 @@ export interface SpeechService {
    */
   unlock(): void
   speak(text: string, options?: SpeakOptions): void
+  /**
+   * มีเสียงพูดของภาษานี้ติดตั้งอยู่ในอุปกรณ์หรือไม่
+   * เครื่องที่ไม่มีเสียงภาษาไทยจะอ่านภาษาไทยด้วยเสียงภาษาอื่น ซึ่งฟังแทบไม่รู้เรื่อง
+   * ต้องบอกผู้ใช้ให้รู้ตัว ไม่ใช่ปล่อยให้งงว่าทำไมฟังไม่ออก
+   */
+  hasVoiceFor(language: ServiceLanguage): boolean
   cancel(): void
   setLanguage(language: ServiceLanguage): void
 }

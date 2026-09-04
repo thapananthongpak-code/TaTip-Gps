@@ -42,6 +42,11 @@ class WebSpeechService implements SpeechService {
     return typeof window !== 'undefined' && 'speechSynthesis' in window
   }
 
+  hasVoiceFor(language: ServiceLanguage): boolean {
+    if (!this.isSupported()) return false
+    return this.pickVoice(LANG_TAG[language]) !== null
+  }
+
   setLanguage(language: ServiceLanguage): void {
     this.language = language
   }

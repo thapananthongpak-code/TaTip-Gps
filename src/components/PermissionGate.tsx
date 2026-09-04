@@ -1,4 +1,4 @@
-import { msg } from '@/i18n/messages'
+import { useTranslation } from 'react-i18next'
 import { BigButton } from './BigButton'
 
 interface Props {
@@ -14,23 +14,24 @@ interface Props {
  * 2) iOS ต้องมี user gesture ก่อนถึงจะยอมให้เล่นเสียงพูดได้
  */
 export function PermissionGate({ onStart, speechSupported }: Props) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 text-center">
-      <h2 className="text-2xl font-bold">{msg.permission.title}</h2>
+      <h2 className="text-2xl font-bold">{t('permission.title')}</h2>
       <p className="max-w-md text-lg leading-relaxed text-slate-700 dark:text-slate-200">
-        {msg.permission.body}
+        {t('permission.body')}
       </p>
 
       <BigButton onClick={onStart} aria-describedby="start-hint" className="w-full max-w-md">
-        {msg.permission.startButton}
+        {t('permission.startButton')}
       </BigButton>
       <p id="start-hint" className="text-base text-slate-600 dark:text-slate-300">
-        {msg.permission.startButtonHint}
+        {t('permission.startButtonHint')}
       </p>
 
       {!speechSupported && (
         <p role="alert" className="max-w-md rounded-xl bg-amber-100 p-4 text-base text-amber-950">
-          {msg.errors.speechUnsupported}
+          {t('errors.speechUnsupported')}
         </p>
       )}
     </div>

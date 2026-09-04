@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
-import { msg } from '@/i18n/messages'
+import { useTranslation } from 'react-i18next'
+import { currentLanguage } from '@/i18n'
 import { geocodingService } from '@/services'
 import { ServiceError } from '@/types'
 import type { GeoPosition } from '@/types'
@@ -13,6 +14,7 @@ import { useSpeech } from './useSpeech'
  * ผู้ใช้จึงกดซ้ำได้โดยไม่ยิง Nominatim ใหม่ทุกครั้ง
  */
 export function useWhereAmI(position: GeoPosition | null) {
+  const { t } = useTranslation()
   const { speak } = useSpeech()
   const [isLoading, setIsLoading] = useState(false)
   const [address, setAddress] = useState<string | null>(null)
@@ -20,7 +22,7 @@ export function useWhereAmI(position: GeoPosition | null) {
 
   const announce = useCallback(async () => {
     if (!position) {
-      speak(msg.whereAmI.noPositionSpoken, { priority: 'critical' })
+      speak(t('whereAmI.noPositionSpoken'), { priority: 'critical' })
       return
     }
 
@@ -29,27 +31,33 @@ export function useWhereAmI(position: GeoPosition | null) {
     abortRef.current = controller
 
     setIsLoading(true)
-    speak(msg.whereAmI.lookingUpSpoken)
+    speak(t('whereAmI.lookingUpSpoken'))
 
     try {
-      const place = await geocodingService.reverse(position, { signal: controller.signal })
+      const place = await geocodingService.reverse(position, {
+        signal: controller.signal,
+        // ขอที่อยู่เป็นภาษาเดียวกับที่ผู้ใช้เลือกไว้
+        language: currentLanguage(),
+      })
       if (controller.signal.aborted) return
       if (!place) {
-        speak(msg.whereAmI.failedSpoken, { priority: 'critical' })
+        speak(t('whereAmI.failedSpoken'), { priority: 'critical' })
         setAddress(null)
         return
       }
       setAddress(place.address)
-      speak(msg.whereAmI.spoken(shortenAddressForSpeech(place.address)), { priority: 'critical' })
+      speak(t('whereAmI.spoken', { address: shortenAddressForSpeech(place.address) }), {
+        priority: 'critical',
+      })
     } catch (err) {
       if (controller.signal.aborted) return
       const code = err instanceof ServiceError ? err.code : 'UNKNOWN'
       if (code === 'ABORTED') return
-      speak(msg.errors[`${code}_SPOKEN`], { priority: 'critical' })
+      speak(t(`errors.${code}_SPOKEN`), { priority: 'critical' })
     } finally {
       if (!controller.signal.aborted) setIsLoading(false)
     }
-  }, [position, speak])
+  }, [position, speak, t])
 
   return { announce, isLoading, address }
 }

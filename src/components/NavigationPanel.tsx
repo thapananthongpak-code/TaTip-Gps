@@ -1,8 +1,20 @@
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import type { UseNavigationResult } from '@/hooks/useNavigation'
-import { msg } from '@/i18n/messages'
 import { formatDistance, speakDistance } from '@/utils/format'
 import { ARRIVAL_RADIUS_M } from '@/utils/navigation'
 import { BigButton } from './BigButton'
+
+/** ประโยคคำแนะนำที่แสดงบนจอ — โครงเดียวกับที่พูดออกเสียง เพื่อไม่ให้สองทางไม่ตรงกัน */
+function instructionText(t: TFunction, progress: NonNullable<UseNavigationResult['progress']>) {
+  const step = progress.nextStep
+  if (!step) return ''
+  const maneuver = t(`maneuver.${step.maneuver}`)
+  const distance = speakDistance(progress.distanceToNextManeuver)
+  return step.streetName
+    ? t('nav.stepInstructionWithStreet', { distance, maneuver, street: step.streetName })
+    : t('nav.stepInstruction', { distance, maneuver })
+}
 
 interface Props {
   nav: UseNavigationResult
@@ -11,20 +23,21 @@ interface Props {
 
 /** แผงนำทางระหว่างเดินทาง — คำแนะนำถัดไป ระยะที่เหลือ และปุ่มควบคุม */
 export function NavigationPanel({ nav, onRepeat }: Props) {
+  const { t } = useTranslation()
   const { status, route, destination, progress, error, isOffRoute, isRecalculating } = nav
 
   if (status === 'error' && error) {
     return (
       <section className="border-t-4 border-danger-500 bg-danger-500/10 p-4">
         <p role="alert" className="text-lg font-bold text-danger-600 dark:text-red-300">
-          {msg.errors[error.code]}
+          {t(`errors.${error.code}`)}
         </p>
         <div className="mt-3 flex gap-2">
           <BigButton variant="danger" onClick={nav.retry} className="flex-1">
-            {msg.errors.retryButton}
+            {t('errors.retryButton')}
           </BigButton>
           <BigButton variant="secondary" onClick={nav.stop} className="flex-1">
-            {msg.nav.stopButton}
+            {t('nav.stopButton')}
           </BigButton>
         </div>
       </section>
@@ -33,56 +46,58 @@ export function NavigationPanel({ nav, onRepeat }: Props) {
 
   return (
     <section
-      aria-label={destination ? msg.nav.navigatingTo(destination.name) : msg.nav.calculating}
+      aria-label={
+        destination
+          ? t('nav.navigatingTo', { destination: destination.name })
+          : t('nav.calculating')
+      }
       className="border-t-2 border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
     >
       {/* คำแนะนำถัดไปคือข้อมูลที่สำคัญที่สุดบนหน้าจอนี้ ต้องประกาศทุกครั้งที่เปลี่ยน */}
       <p aria-live="assertive" className="text-xl leading-snug font-bold">
-        {status === 'calculating' && msg.nav.calculating}
+        {status === 'calculating' && t('nav.calculating')}
         {status === 'arrived' &&
           (nav.arrivalOffset !== null && nav.arrivalOffset > ARRIVAL_RADIUS_M && destination
-            ? msg.nav.arrivedNearSpoken(destination.name, formatDistance(nav.arrivalOffset))
-            : msg.nav.arrived)}
+            ? t('nav.arrivedNearSpoken', {
+                destination: destination.name,
+                distance: formatDistance(nav.arrivalOffset),
+              })
+            : t('nav.arrived'))}
         {status === 'navigating' &&
           (isRecalculating
-            ? msg.nav.recalculating
-            : progress?.nextStep &&
-              msg.nav.stepInstruction(
-                speakDistance(progress.distanceToNextManeuver),
-                msg.maneuver[progress.nextStep.maneuver],
-                progress.nextStep.streetName,
-              ))}
+            ? t('nav.recalculating')
+            : progress?.nextStep && instructionText(t, progress))}
       </p>
 
       {isOffRoute && status === 'navigating' && (
         <p role="alert" className="mt-1 text-base font-bold text-danger-600 dark:text-red-300">
-          {msg.nav.offRouteSpoken}
+          {t('nav.offRouteSpoken')}
         </p>
       )}
 
       {route?.usedFallbackProfile && (
         <p role="alert" className="mt-2 rounded-xl bg-amber-100 p-3 text-sm text-amber-950">
-          {msg.nav.fallbackWarningSpoken}
+          {t('nav.fallbackWarningSpoken')}
         </p>
       )}
 
       {progress && (
         <dl className="mt-2 grid grid-cols-2 gap-x-4 text-base">
-          <dt className="text-slate-600 dark:text-slate-300">{msg.nav.remainingLabel}</dt>
+          <dt className="text-slate-600 dark:text-slate-300">{t('nav.remainingLabel')}</dt>
           <dd className="font-bold">{formatDistance(progress.remainingDistance)}</dd>
-          <dt className="text-slate-600 dark:text-slate-300">{msg.nav.etaLabel}</dt>
+          <dt className="text-slate-600 dark:text-slate-300">{t('nav.etaLabel')}</dt>
           <dd className="font-bold">
-            {msg.nav.minutes(Math.max(1, Math.round(progress.remainingDuration / 60)))}
+            {t('nav.minutes', { count: Math.max(1, Math.round(progress.remainingDuration / 60)) })}
           </dd>
         </dl>
       )}
 
       <div className="mt-3 flex gap-2">
         <BigButton variant="secondary" onClick={onRepeat} className="flex-1">
-          {msg.nav.repeatInstruction}
+          {t('nav.repeatInstruction')}
         </BigButton>
         <BigButton variant="danger" onClick={nav.stop} className="flex-1">
-          {msg.nav.stopButton}
+          {t('nav.stopButton')}
         </BigButton>
       </div>
     </section>

@@ -1,7 +1,7 @@
 import L from 'leaflet'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Circle, Marker } from 'react-leaflet'
-import { msg } from '@/i18n/messages'
 import type { GeoPosition } from '@/types'
 
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
  * - เปลี่ยนสีตามคุณภาพสัญญาณได้ (แม่นยำ = น้ำเงิน, อ่อน/ค้าง = ส้ม)
  */
 export function CurrentPositionMarker({ position, isPoorAccuracy, isStale }: Props) {
+  const { t } = useTranslation()
   const degraded = isPoorAccuracy || isStale
   const color = degraded ? '#c2620b' : '#1668d6'
 
@@ -45,7 +46,7 @@ export function CurrentPositionMarker({ position, isPoorAccuracy, isStale }: Pro
         // วงความคลาดเคลื่อนเป็นข้อมูลเสริมเชิงภาพ ไม่ต้องให้ screen reader อ่าน
         interactive={false}
       />
-      <Marker position={position} icon={icon} alt={msg.map.youAreHereMarker} />
+      <Marker position={position} icon={icon} alt={t('map.youAreHereMarker')} />
     </>
   )
 }

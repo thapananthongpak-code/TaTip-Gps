@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearch } from '@/hooks/useSearch'
 import { useSpeech } from '@/hooks/useSpeech'
-import { msg } from '@/i18n/messages'
 import { mapService } from '@/services'
 import type { GeoPosition, Place } from '@/types'
 import { formatDistance } from '@/utils/format'
@@ -14,6 +14,7 @@ interface Props {
 
 /** ช่องค้นหาจุดหมาย + รายการผลลัพธ์ที่กดเลือกได้ */
 export function SearchPanel({ position, onSelect }: Props) {
+  const { t } = useTranslation()
   const inputId = useId()
   const { query, setQuery, results, isSearching, error, isEmpty, clear } = useSearch(position)
   const { speak } = useSpeech()
@@ -27,18 +28,18 @@ export function SearchPanel({ position, onSelect }: Props) {
     if (query.trim().length < 2) return
     spokenForRef.current = key
 
-    if (error) speak(msg.errors[`${error.code}_SPOKEN`], { priority: 'critical' })
-    else if (isEmpty) speak(msg.search.noResultsSpoken)
-    else if (results.length > 0) speak(msg.search.resultsSpoken(results.length))
-  }, [error, isEmpty, isSearching, query, results.length, speak])
+    if (error) speak(t(`errors.${error.code}_SPOKEN`), { priority: 'critical' })
+    else if (isEmpty) speak(t('search.noResultsSpoken'))
+    else if (results.length > 0) speak(t('search.resultsSpoken', { count: results.length }))
+  }, [error, isEmpty, isSearching, query, results.length, speak, t])
 
   return (
     <section
-      aria-label={msg.search.label}
+      aria-label={t('search.label')}
       className="border-t-2 border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
     >
       <label htmlFor={inputId} className="block text-lg font-bold">
-        {msg.search.label}
+        {t('search.label')}
       </label>
 
       <div className="mt-2 flex gap-2">
@@ -47,31 +48,31 @@ export function SearchPanel({ position, onSelect }: Props) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={msg.search.placeholder}
+          placeholder={t('search.placeholder')}
           aria-describedby={`${inputId}-hint`}
           autoComplete="off"
           className="min-h-touch flex-1 rounded-xl border-2 border-slate-400 px-4 py-3 text-lg dark:border-slate-500 dark:bg-slate-800"
         />
         {query && (
-          <BigButton variant="secondary" onClick={clear} aria-label={msg.search.clear}>
+          <BigButton variant="secondary" onClick={clear} aria-label={t('search.clear')}>
             ✕
           </BigButton>
         )}
       </div>
 
       <p id={`${inputId}-hint`} className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-        {msg.search.hint}
+        {t('search.hint')}
       </p>
 
       {/* ประกาศสถานะการค้นหาให้ screen reader โดยไม่ต้องย้ายโฟกัส */}
       <p aria-live="polite" className="mt-2 text-base font-bold">
-        {isSearching && msg.search.searching}
-        {!isSearching && error && msg.errors[error.code]}
-        {!isSearching && !error && isEmpty && msg.search.noResults}
+        {isSearching && t('search.searching')}
+        {!isSearching && error && t(`errors.${error.code}`)}
+        {!isSearching && !error && isEmpty && t('search.noResults')}
       </p>
 
       {results.length > 0 && (
-        <ul aria-label={msg.search.resultsLabel} className="mt-2 flex flex-col gap-2">
+        <ul aria-label={t('search.resultsLabel')} className="mt-2 flex flex-col gap-2">
           {results.map((place) => {
             const distance = position ? mapService.distanceBetween(position, place.location) : null
             return (
