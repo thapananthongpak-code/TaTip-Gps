@@ -1,5 +1,6 @@
 import { osmMapService } from './impl/osmMapService'
-import type { GeocodingService, MapService, RoutingService } from './interfaces'
+import { webSpeechService } from './impl/webSpeechService'
+import type { GeocodingService, MapService, RoutingService, SpeechService } from './interfaces'
 
 /**
  * จุดรวมของ service ทั้งหมด (composition root)
@@ -8,11 +9,13 @@ import type { GeocodingService, MapService, RoutingService } from './interfaces'
  */
 export const mapService: MapService = osmMapService
 
+export const speechService: SpeechService = webSpeechService
+
 /** Phase 2: ผูกกับ nominatimGeocodingService */
 export const geocodingService: GeocodingService | null = null
 
 /** Phase 2: ผูกกับ osrmRoutingService */
 export const routingService: RoutingService | null = null
 
-export type { GeocodingService, MapService, RoutingService }
+export type { GeocodingService, MapService, RoutingService, SpeechService }
 export * from './config'
