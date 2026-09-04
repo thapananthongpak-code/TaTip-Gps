@@ -44,4 +44,9 @@ export interface Route {
   steps: RouteStep[]
   origin: LatLng
   destination: Place
+  /**
+   * true = เส้นทางนี้มาจากบริการสำรองที่ใช้ profile รถยนต์ ไม่ใช่ทางเดินเท้าจริง
+   * ต้องเตือนผู้ใช้ด้วยเสียงก่อนเริ่มเดิน
+   */
+  usedFallbackProfile?: boolean
 }

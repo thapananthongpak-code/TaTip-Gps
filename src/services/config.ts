@@ -12,9 +12,22 @@ export const OSM_MAX_ZOOM = 19
 export const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org'
 export const NOMINATIM_MIN_INTERVAL_MS = 1100
 
-/** OSRM demo server: ห้ามใช้งานหนัก ไม่มี SLA */
-export const OSRM_BASE_URL = 'https://router.project-osrm.org'
+/**
+ * OSRM สำหรับเส้นทางเดินเท้า
+ *
+ * ⚠️ router.project-osrm.org (demo server) ติดตั้งไว้เฉพาะ profile รถยนต์
+ * เรียก /foot/ ไปก็ได้เส้นทางรถกลับมาเหมือนเดิมทุกประการ (ตรวจสอบแล้ว: ระยะและเวลาเท่ากันเป๊ะทุก profile)
+ * ซึ่งอันตรายสำหรับแอปนำทางคนเดิน เพราะจะพาไปตามถนนรถ ไม่ใช้ทางเท้า และคิดเวลาด้วยความเร็วรถ
+ *
+ * จึงใช้อินสแตนซ์ของ FOSSGIS ที่ติดตั้ง profile เดินเท้าไว้จริง (ตัวเดียวกับที่เว็บ openstreetmap.org ใช้)
+ * และเหลือ demo server ไว้เป็นทางสำรองเท่านั้น พร้อมทำเครื่องหมายว่าเป็นเส้นทางรถ เพื่อเตือนผู้ใช้
+ */
+export const OSRM_BASE_URL = 'https://routing.openstreetmap.de/routed-foot'
+export const OSRM_FALLBACK_BASE_URL = 'https://router.project-osrm.org'
 export const OSRM_WALKING_PROFILE = 'foot'
+
+/** ความเร็วเดินเฉลี่ยของคนทั่วไป (เมตร/วินาที) ใช้ประเมินเวลาเมื่อต้องใช้ทางสำรอง */
+export const WALKING_SPEED_MPS = 1.25
 
 /** หน่วงการค้นหาอย่างน้อย 1 วินาที กัน rate limit ของ Nominatim */
 export const SEARCH_DEBOUNCE_MS = 1000

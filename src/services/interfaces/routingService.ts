@@ -3,6 +3,11 @@ import type { LatLng, Place, Route, ServiceLanguage } from '@/types'
 export interface RouteOptions {
   language?: ServiceLanguage
   signal?: AbortSignal
+  /**
+   * แจ้งเมื่อคำขอล้มเหลวและกำลังจะลองใหม่
+   * ระหว่างนำทาง ผู้ใช้ต้องรู้ทันทีว่าระบบกำลังสะดุด ไม่ใช่รู้ตอนที่ยอมแพ้ไปแล้ว
+   */
+  onRetry?: (attempt: number) => void
 }
 
 /**

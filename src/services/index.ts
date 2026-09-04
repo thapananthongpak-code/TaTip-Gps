@@ -1,4 +1,6 @@
+import { nominatimGeocodingService } from './impl/nominatimGeocodingService'
 import { osmMapService } from './impl/osmMapService'
+import { osrmRoutingService } from './impl/osrmRoutingService'
 import { webSpeechService } from './impl/webSpeechService'
 import type { GeocodingService, MapService, RoutingService, SpeechService } from './interfaces'
 
@@ -11,11 +13,11 @@ export const mapService: MapService = osmMapService
 
 export const speechService: SpeechService = webSpeechService
 
-/** Phase 2: ผูกกับ nominatimGeocodingService */
-export const geocodingService: GeocodingService | null = null
+/** สลับไป Google Places ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
+export const geocodingService: GeocodingService = nominatimGeocodingService
 
-/** Phase 2: ผูกกับ osrmRoutingService */
-export const routingService: RoutingService | null = null
+/** สลับไป Google Directions ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
+export const routingService: RoutingService = osrmRoutingService
 
 export type { GeocodingService, MapService, RoutingService, SpeechService }
 export * from './config'

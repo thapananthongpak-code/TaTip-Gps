@@ -1,6 +1,14 @@
 /** โค้ดข้อผิดพลาดกลางของ service ทุกตัว — UI/เสียงแปลผ่าน i18n key `errors.<code>` */
 export type ServiceErrorCode =
-  'NETWORK' | 'RATE_LIMITED' | 'NOT_FOUND' | 'TIMEOUT' | 'ABORTED' | 'PROVIDER_ERROR' | 'UNKNOWN'
+  | 'NETWORK'
+  | 'RATE_LIMITED'
+  | 'NOT_FOUND'
+  | 'TIMEOUT'
+  | 'ABORTED'
+  | 'PROVIDER_ERROR'
+  /** ยังไม่มีตำแหน่ง GPS จึงเริ่มคำนวณเส้นทางไม่ได้ */
+  | 'NO_POSITION'
+  | 'UNKNOWN'
 
 export class ServiceError extends Error {
   readonly code: ServiceErrorCode
