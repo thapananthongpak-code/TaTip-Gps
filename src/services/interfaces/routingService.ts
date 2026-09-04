@@ -1,0 +1,15 @@
+import type { LatLng, Place, Route, ServiceLanguage } from '@/types'
+
+export interface RouteOptions {
+  language?: ServiceLanguage
+  signal?: AbortSignal
+}
+
+/**
+ * คำนวณเส้นทางเดินเท้า
+ * implementation ปัจจุบัน: OSRM demo server (walking profile)
+ * ถ้าจะย้ายไป Google Directions ในอนาคต แก้แค่ implementation
+ */
+export interface RoutingService {
+  getWalkingRoute(origin: LatLng, destination: Place, options?: RouteOptions): Promise<Route>
+}

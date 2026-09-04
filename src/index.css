@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+/**
+ * ธีมสำหรับผู้พิการทางสายตา/สายตาเลือนราง
+ * - contrast สูง (ตรวจตาม WCAG AA/AAA อย่างละเอียดอีกครั้งใน Phase 5)
+ * - ตัวอักษรใหญ่เป็นค่าเริ่มต้น
+ */
+@theme {
+  --color-brand-50: #eef6ff;
+  --color-brand-500: #1668d6;
+  --color-brand-600: #0f52ab;
+  --color-brand-700: #0b3d80;
+  --color-danger-500: #c62828;
+  --color-danger-600: #9b1c1c;
+  --color-safe-500: #1b7f3b;
+
+  /* ขนาดขั้นต่ำของปุ่มตามมาตรฐาน touch target */
+  --spacing-touch: 3rem; /* 48px */
+}
+
+:root {
+  color-scheme: light dark;
+  font-size: 18px; /* ฐานใหญ่กว่าปกติ — Phase 5 จะให้ผู้ใช้ปรับได้ */
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    'Noto Sans Thai',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* โฟกัสต้องเห็นชัดเสมอ สำหรับผู้ใช้คีย์บอร์ด/สวิตช์ */
+:focus-visible {
+  outline: 4px solid var(--color-brand-500);
+  outline-offset: 3px;
+}
+
+/* ข้อความสำหรับ screen reader เท่านั้น */
+.sr-only-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
