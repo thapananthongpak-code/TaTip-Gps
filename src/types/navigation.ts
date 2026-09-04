@@ -1,4 +1,5 @@
 import type { LatLng, Place } from './geo'
+import type { HazardKind } from './safety'
 
 /** ชนิดการเลี้ยว/การเคลื่อนที่แบบกลาง — map มาจาก OSRM maneuver ได้ และรองรับผู้ให้บริการอื่นในอนาคต */
 export type ManeuverType =
@@ -29,8 +30,11 @@ export interface RouteStep {
   streetName?: string
   /** เส้นทางย่อยของขั้นตอนนี้ สำหรับวาดบนแผนที่ */
   geometry: LatLng[]
-  /** true ถ้าขั้นตอนนี้เป็นจุดเสี่ยง เช่น ทางข้าม/สี่แยก (ใช้ใน Phase 4) */
-  isHazard?: boolean
+  /**
+   * ชนิดจุดเสี่ยงที่ปลายขั้นตอนนี้ (ถ้ามี) — ใช้เตือนล่วงหน้าด้วยเสียงและการสั่น
+   * undefined = ไม่ถือว่าเสี่ยงเป็นพิเศษ
+   */
+  hazard?: HazardKind
 }
 
 export interface Route {

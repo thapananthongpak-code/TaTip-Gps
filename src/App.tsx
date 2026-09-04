@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BigButton } from '@/components/BigButton'
 import { GpsStatusPanel } from '@/components/GpsStatusPanel'
@@ -7,34 +7,62 @@ import { MapControls } from '@/components/MapControls'
 import { MapView } from '@/components/MapView'
 import { NavigationPanel } from '@/components/NavigationPanel'
 import { PermissionGate } from '@/components/PermissionGate'
+import { SafetyPanel } from '@/components/SafetyPanel'
 import { SearchPanel } from '@/components/SearchPanel'
+import { SharedLocationView } from '@/components/SharedLocationView'
+import { useEmergency } from '@/hooks/useEmergency'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { useGpsAnnouncer } from '@/hooks/useGpsAnnouncer'
+import { useHazardAlerts } from '@/hooks/useHazardAlerts'
+import { useLiveShare } from '@/hooks/useLiveShare'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useNavigationAnnouncer } from '@/hooks/useNavigationAnnouncer'
+import { useSettings } from '@/hooks/useSettings'
+import { useShareRoute } from '@/hooks/useShareRoute'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useVoiceAvailability } from '@/hooks/useVoiceAvailability'
 import { useWhereAmI } from '@/hooks/useWhereAmI'
 import type { Place } from '@/types'
 import { speakDistance } from '@/utils/format'
+import { vibrate } from '@/utils/vibration'
+
+/** ระยะที่เริ่มสั่นเตือนก่อนถึงจุดเลี้ยว (เมตร) — ตรงกับจังหวะที่เสียงเตือนดัง */
+const MANEUVER_VIBRATION_DISTANCE_M = 20
 
 /**
  * ตาทิพย์ Navigator
- * Phase 2: ค้นหาจุดหมาย + คำนวณเส้นทางเดินเท้า + นำทาง turn-by-turn ด้วยเสียง
+ * Phase 4: เพิ่มฟีเจอร์ความปลอดภัย — SOS, แชร์ตำแหน่ง, เตือนจุดเสี่ยง, สั่นเตือน
  */
 export default function App() {
   const { t } = useTranslation()
   const [started, setStarted] = useState(false)
   const [follow, setFollow] = useState(true)
+  const [showSafety, setShowSafety] = useState(false)
 
+  const shareRoute = useShareRoute()
+  const settings = useSettings()
   const geo = useGeolocation()
   const nav = useNavigation(geo.position)
   const whereAmI = useWhereAmI(geo.position)
   const { supported: speechSupported, speak, unlock } = useSpeech()
 
+  const emergency = useEmergency({
+    position: geo.position,
+    vibrationEnabled: settings.settings.vibrationEnabled,
+  })
+  const liveShare = useLiveShare({
+    position: geo.position,
+    destination: nav.destination,
+    hasArrived: nav.status === 'arrived',
+  })
+
   useVoiceAvailability(started)
   useGpsAnnouncer(geo, started)
   useNavigationAnnouncer(nav, started)
+  useHazardAlerts(nav, {
+    enabled: started && settings.settings.hazardAlertsEnabled,
+    vibrationEnabled: settings.settings.vibrationEnabled,
+  })
 
   // ปุ่มแรกที่ผู้ใช้แตะ ทำสองอย่างพร้อมกัน: ปลดล็อกเสียง (iOS) แล้วค่อยขอสิทธิ์ GPS
   const handleStart = useCallback(() => {
@@ -85,6 +113,33 @@ export default function App() {
     )
   }, [nav.progress, speak, t])
 
+  const handleSos = useCallback(
+    (contactPhone?: string) => {
+      void emergency.trigger(contactPhone)
+    },
+    [emergency],
+  )
+
+  // สั่นเตือนควบคู่กับเสียงเมื่อใกล้ถึงจุดเลี้ยว เผื่ออยู่ในที่เสียงดัง
+  // ต้องล็อกไว้ว่าสั่นไปแล้วสำหรับจุดเลี้ยวไหน ไม่งั้นจะสั่นซ้ำทุกครั้งที่ GPS อัปเดต
+  // (ประมาณวินาทีละครั้ง) ซึ่งกวนผู้ใช้และกินแบตเตอรี่
+  const nextManeuverDistance = nav.progress?.distanceToNextManeuver
+  const currentStepIndex = nav.progress?.currentStepIndex
+  const vibrationEnabled = settings.settings.vibrationEnabled
+  const vibratedStepRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!started || nextManeuverDistance === undefined || currentStepIndex === undefined) return
+    if (nextManeuverDistance > MANEUVER_VIBRATION_DISTANCE_M) return
+    if (vibratedStepRef.current === currentStepIndex) return
+    vibratedStepRef.current = currentStepIndex
+    vibrate('maneuver', vibrationEnabled)
+  }, [started, currentStepIndex, nextManeuverDistance, vibrationEnabled])
+
+  // ผู้รับลิงก์แชร์ตำแหน่งจะเห็นหน้านี้แทนหน้าแอปหลัก
+  if (shareRoute.isShareView) {
+    return <SharedLocationView payload={shareRoute.payload} />
+  }
+
   const isNavigating = nav.status !== 'idle'
 
   return (
@@ -133,6 +188,15 @@ export default function App() {
               >
                 {t('whereAmI.button')}
               </BigButton>
+              <BigButton
+                variant="secondary"
+                onClick={() => setShowSafety((prev) => !prev)}
+                aria-expanded={showSafety}
+                aria-controls="safety-panel"
+                className="mt-2 w-full"
+              >
+                {showSafety ? t('settings.closeSettings') : t('settings.openSettings')}
+              </BigButton>
               {/* แสดงที่อยู่เต็มไว้ให้อ่าน ส่วนที่พูดออกเสียงเป็นฉบับย่อ */}
               {whereAmI.address && (
                 <p aria-live="polite" className="mt-2 text-base text-slate-700 dark:text-slate-200">
@@ -140,6 +204,23 @@ export default function App() {
                 </p>
               )}
             </div>
+
+            {showSafety && (
+              <div id="safety-panel">
+                <SafetyPanel
+                  settings={settings}
+                  onSos={handleSos}
+                  hasPosition={geo.position !== null}
+                  share={{
+                    isSharing: liveShare.isSharing,
+                    expiresAt: liveShare.session?.expiresAt ?? null,
+                    onStart: () => void liveShare.start(),
+                    onSendUpdate: () => void liveShare.sendUpdate(),
+                    onStop: liveShare.stop,
+                  }}
+                />
+              </div>
+            )}
 
             <GpsStatusPanel geo={geo} onRepeatStatus={handleRepeatStatus} />
           </div>

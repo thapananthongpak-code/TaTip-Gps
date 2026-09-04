@@ -1,8 +1,17 @@
+import { localSettingsService } from './impl/localSettingsService'
 import { nominatimGeocodingService } from './impl/nominatimGeocodingService'
 import { osmMapService } from './impl/osmMapService'
 import { osrmRoutingService } from './impl/osrmRoutingService'
+import { webShareService } from './impl/webShareService'
 import { webSpeechService } from './impl/webSpeechService'
-import type { GeocodingService, MapService, RoutingService, SpeechService } from './interfaces'
+import type {
+  GeocodingService,
+  MapService,
+  RoutingService,
+  SettingsService,
+  ShareService,
+  SpeechService,
+} from './interfaces'
 
 /**
  * จุดรวมของ service ทั้งหมด (composition root)
@@ -13,11 +22,24 @@ export const mapService: MapService = osmMapService
 
 export const speechService: SpeechService = webSpeechService
 
+/** เก็บค่าตั้งค่าบนเครื่องผู้ใช้เท่านั้น */
+export const settingsService: SettingsService = localSettingsService
+
+/** แชร์ตำแหน่งผ่านความสามารถของเบราว์เซอร์ ไม่ผ่านเซิร์ฟเวอร์ของแอป */
+export const shareService: ShareService = webShareService
+
 /** สลับไป Google Places ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
 export const geocodingService: GeocodingService = nominatimGeocodingService
 
 /** สลับไป Google Directions ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
 export const routingService: RoutingService = osrmRoutingService
 
-export type { GeocodingService, MapService, RoutingService, SpeechService }
+export type {
+  GeocodingService,
+  MapService,
+  RoutingService,
+  SettingsService,
+  ShareService,
+  SpeechService,
+}
 export * from './config'

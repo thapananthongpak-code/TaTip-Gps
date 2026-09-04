@@ -143,5 +143,73 @@
     "routeFailedSpoken": "The route could not be calculated after several attempts. Navigation has stopped. Please stop somewhere safe and try again.",
     "retryButton": "Try again",
     "speechUnsupported": "This browser does not support speech. The app will show text on screen instead."
+  },
+  "hazard": {
+    "crossroadsSpoken": "Caution. A crossroads is ahead with traffic from several directions. Please stop and listen before crossing.",
+    "majorRoadSpoken": "Caution. A main road is ahead, {{street}}. Please stop and listen before crossing.",
+    "disclaimer": "Hazard warnings come from open map data, which does not say whether a pedestrian crossing or traffic signal actually exists. Always rely on your own judgement."
+  },
+  "sos": {
+    "button": "Emergency help",
+    "buttonLabel": "Emergency help button. Press and hold for three seconds to send your location.",
+    "holding": "Keep holding...",
+    "holdingSpoken": "Keep holding for three seconds to send for help. Lift your finger to cancel.",
+    "cancelledSpoken": "Emergency request cancelled. Nothing was sent.",
+    "sendingSpoken": "Opening your messaging app with your location. Please press send in the messaging app.",
+    "copiedSpoken": "The emergency message with your location has been copied. Please paste it into the app you want to send it from.",
+    "noContactSpoken": "No emergency contact is set and this device cannot share the message. Please add an emergency contact number in the settings.",
+    "noPositionSpoken": "Your location is not known yet, so help cannot be sent. Please wait until the app finds your location.",
+    "hintWithContact": "Hold for 3 seconds to send your location to {{name}}",
+    "hintNoContact": "Hold for 3 seconds to share your location. Adding an emergency contact in advance is recommended.",
+    "shareTitle": "Emergency help request",
+    "messageTemplate": "I need help. My location is {{latitude}}, {{longitude}} (accurate to about {{accuracy}} meters) at {{time}}. Map: {{url}}"
+  },
+  "share": {
+    "title": "Share location with someone you trust",
+    "start": "Start sharing location",
+    "stop": "Stop sharing",
+    "sendUpdate": "Send latest location",
+    "activeUntil": "Sharing is on. The link expires at {{time}}",
+    "snapshotNotice": "This link shows your location at the moment you sent it. It does not update on its own. Please tap \"Send latest location\" from time to time.",
+    "messageTemplate": "I am on my way. Here is my location. This link expires at {{expires}}",
+    "updateMessage": "Here is my latest location",
+    "startedSpoken": "Location sharing started. The link shows your location at the time it was sent and does not update automatically.",
+    "updateSentSpoken": "Latest location sent",
+    "copiedSpoken": "The location link has been copied. Please paste it into the app you want to send it from.",
+    "stoppedSpoken": "Location sharing stopped",
+    "autoStoppedSpoken": "You have arrived. Location sharing has been stopped automatically.",
+    "noPositionSpoken": "Your location is not known yet, so it cannot be shared."
+  },
+  "sharedView": {
+    "title": "Shared location",
+    "snapshotWarning": "This is the location at the moment the sender shared it, not a live position. The marker will not move until they send a new link.",
+    "capturedAt": "Location recorded at",
+    "expiresAt": "Link expires",
+    "destination": "Travelling to",
+    "openInMaps": "Open in maps",
+    "expiredTitle": "This link has expired or is not valid",
+    "expiredBody": "Shared location links expire for safety. Please ask the sender for a new link."
+  },
+  "settings": {
+    "safetyTitle": "Safety",
+    "contactsTitle": "Emergency contacts",
+    "contactsPrivacy": "Saved numbers stay on your device only and are never sent to any server.",
+    "contactName": "Contact name",
+    "contactPhone": "Phone number",
+    "addContact": "Save contact",
+    "removeContact": "Remove {{name}}",
+    "sendToContact": "Send location to {{name}}",
+    "send": "Send",
+    "alertsTitle": "Alerts",
+    "hazardAlerts": "Spoken hazard warnings",
+    "vibration": "Vibrate along with speech",
+    "vibrationUnsupported": "This device does not support vibration (for example iPhone on Safari). Speech will be used on its own.",
+    "clearData": "Delete saved contacts and settings",
+    "openSettings": "Safety settings",
+    "closeSettings": "Close settings",
+    "clearDataConfirm": "Tap again to confirm deletion",
+    "clearDataConfirmSpoken": "Confirm deleting all emergency contacts and settings. Tap the same button again within five seconds to confirm, or wait to cancel.",
+    "clearDataDoneSpoken": "Contacts and settings have been deleted. Your language choice is kept.",
+    "clearDataNote": "Your language choice is kept, and the app never stored any location history anyway."
   }
 }

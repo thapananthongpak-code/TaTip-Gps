@@ -6,7 +6,7 @@ import {
 } from '@/services/config'
 import type { RouteOptions, RoutingService } from '@/services/interfaces'
 import { ServiceError } from '@/types'
-import type { LatLng, ManeuverType, Place, Route, RouteStep } from '@/types'
+import type { HazardKind, LatLng, ManeuverType, Place, Route, RouteStep } from '@/types'
 import { fetchJson } from './httpClient'
 
 /** รูปแบบข้อมูลดิบของ OSRM — ไม่รั่วออกไปนอก service นี้ */
@@ -79,14 +79,32 @@ function toManeuverType(m: OsrmManeuver): ManeuverType {
   }
 }
 
+/** ชื่อที่บ่งว่าเป็นถนนใหญ่ ไม่ใช่ซอยหรือทางเดินเล็ก */
+const MAJOR_ROAD_PATTERNS = [/^ถนน/, /\bRoad\b/i, /\bRd\.?\b/i, /\bAvenue\b/i, /\bHighway\b/i]
+
 /**
- * ตัดสินว่าขั้นตอนนี้เป็นจุดเสี่ยงหรือไม่ (ใช้เตือนเสียงใน Phase 4)
- * เกณฑ์: จุดเริ่มของขั้นตอนเป็นแยกที่มีทางแยกตั้งแต่ 3 แขนขึ้นไป
- * = ต้องข้ามถนนหรือระวังรถเลี้ยว
+ * ตัดสินว่าปลายขั้นตอนนี้เป็นจุดเสี่ยงชนิดใด
+ *
+ * เกณฑ์ที่ใช้และเหตุผล (ปรับจากการดูข้อมูลจริงของ OSRM ในกรุงเทพฯ):
+ * - เดิมใช้ "แยกตั้งแต่ 3 แขน" ซึ่งกวาดเกือบทุกขั้นตอน (6 จาก 8) จนคำเตือนไร้ความหมาย
+ * - จึงเหลือสองเกณฑ์ที่บอกความเสี่ยงจริง:
+ *   1. สี่แยก (4 แขนขึ้นไป) — รถมาได้หลายทิศพร้อมกัน
+ *   2. ถนนที่มีชื่อขึ้นต้นว่า "ถนน" หรือลงท้ายด้วย Road/Avenue — เป็นถนนใหญ่ รถเร็ว
+ * - จุดเริ่ม (depart) และจุดหมาย (arrive) ไม่นับเป็นจุดเสี่ยง เพราะผู้ใช้ยืนอยู่กับที่
+ *
+ * ข้อจำกัด: OSRM ฟรีไม่ได้บอกว่ามีทางม้าลายหรือสัญญาณไฟจริงหรือไม่
+ * คำเตือนนี้จึงเป็นการ "ให้ระวังไว้ก่อน" ไม่ใช่การยืนยันว่ามีทางข้าม
  */
-function detectHazard(step: OsrmStep): boolean {
-  const first = step.intersections?.[0]
-  return (first?.bearings.length ?? 0) >= 3
+function detectHazard(step: OsrmStep): HazardKind | undefined {
+  if (step.maneuver.type === 'depart' || step.maneuver.type === 'arrive') return undefined
+
+  const bearings = step.intersections?.[0]?.bearings.length ?? 0
+  if (bearings >= 4) return 'crossroads'
+
+  const name = step.name?.trim()
+  if (name && MAJOR_ROAD_PATTERNS.some((re) => re.test(name))) return 'major-road'
+
+  return undefined
 }
 
 export const osrmRoutingService: RoutingService = {
@@ -149,7 +167,7 @@ async function requestRoute(
     duration: isFallback ? step.distance / WALKING_SPEED_MPS : step.duration,
     streetName: step.name || undefined,
     geometry: step.geometry.coordinates.map(toLatLng),
-    isHazard: detectHazard(step),
+    hazard: detectHazard(step),
   }))
 
   return {
