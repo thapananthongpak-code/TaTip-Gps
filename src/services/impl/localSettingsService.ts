@@ -21,6 +21,8 @@ function parseContacts(value: unknown): EmergencyContact[] {
     if (typeof item !== 'object' || item === null) return []
     const { id, name, phone } = item as Record<string, unknown>
     if (typeof id !== 'string' || typeof name !== 'string' || typeof phone !== 'string') return []
+    if (!name.trim() || name.length > 80 || !/^[+]?[0-9]{6,15}$/.test(phone.replace(/[ ()-]/g, '')))
+      return []
     return [{ id, name, phone }]
   })
 }
@@ -60,19 +62,21 @@ export const localSettingsService: SettingsService = {
     }
   },
 
-  save(settings: AppSettings): void {
+  save(settings: AppSettings): boolean {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+      return true
     } catch {
-      // เขียนไม่ได้ก็ไม่ควรทำให้แอปล่มกลางทาง ค่าที่ตั้งไว้จะอยู่จนกว่าจะปิดแอป
+      return false
     }
   },
 
-  clear(): void {
+  clear(): boolean {
     try {
       localStorage.removeItem(STORAGE_KEY)
+      return true
     } catch {
-      // ไม่มีอะไรให้ทำต่อ
+      return false
     }
   },
 }

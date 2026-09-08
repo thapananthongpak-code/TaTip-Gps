@@ -48,14 +48,17 @@ export default defineConfig({
         // แผนที่ที่เคยโหลดแล้วยังดูได้ตอนออฟไลน์
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/[abc]\.tile\.openstreetmap\.org\/.*/i,
-            handler: 'CacheFirst',
+            urlPattern: /^https:\/\/tile\.openstreetmap\.org\/.*/i,
+            // Fetch uses the browser HTTP cache (Cache-Control/ETag); stored
+            // responses are a fallback for revisits only. No prefetch/download.
+            handler: 'NetworkFirst',
             options: {
-              cacheName: 'osm-tiles',
+              cacheName: 'osm-tiles-v2',
+              networkTimeoutSeconds: 3,
               expiration: {
                 // จำกัดไว้ไม่ให้กินพื้นที่เครื่องผู้ใช้เกินควร และเคารพนโยบายของ OSM
                 maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 14,
+                maxAgeSeconds: 60 * 60 * 24 * 7,
               },
               cacheableResponse: { statuses: [0, 200] },
             },

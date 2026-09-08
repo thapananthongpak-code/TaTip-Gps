@@ -18,7 +18,8 @@ interface Props {
 export function SearchPanel({ position, onSelect, isOnline }: Props) {
   const { t } = useTranslation()
   const inputId = useId()
-  const { query, setQuery, results, isSearching, error, isEmpty, clear } = useSearch(position)
+  const { query, setQuery, results, isSearching, error, isEmpty, clear, search } =
+    useSearch(position)
   const { speak } = useSpeech()
   const spokenForRef = useRef<string | null>(null)
 
@@ -44,7 +45,13 @@ export function SearchPanel({ position, onSelect, isOnline }: Props) {
         {t('search.label')}
       </label>
 
-      <div className="mt-2 flex gap-2">
+      <form
+        className="mt-2 flex flex-wrap gap-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (isOnline) search()
+        }}
+      >
         <input
           id={inputId}
           type="search"
@@ -54,21 +61,24 @@ export function SearchPanel({ position, onSelect, isOnline }: Props) {
           disabled={!isOnline}
           aria-describedby={`${inputId}-hint`}
           autoComplete="off"
-          className="min-h-touch flex-1 rounded-xl border-2 border-slate-500 px-4 py-3 text-lg dark:border-slate-400 dark:bg-slate-800"
+          className="min-h-touch min-w-0 flex-1 rounded-xl border-2 border-slate-500 px-4 py-3 text-lg dark:border-slate-400 dark:bg-slate-800"
         />
         {query && (
           <BigButton variant="secondary" onClick={clear} aria-label={t('search.clear')}>
             ✕
           </BigButton>
         )}
-      </div>
+        <BigButton type="submit" disabled={!isOnline || isSearching || query.trim().length < 2}>
+          {t('search.submit')}
+        </BigButton>
+      </form>
 
       <p id={`${inputId}-hint`} className="mt-1 text-sm text-slate-600 dark:text-slate-300">
         {isOnline ? t('search.hint') : t('offline.searchUnavailable')}
       </p>
 
       {/* ประกาศสถานะการค้นหาให้ screen reader โดยไม่ต้องย้ายโฟกัส */}
-      <p aria-live="polite" className="mt-2 text-base font-bold">
+      <p className="mt-2 text-base font-bold">
         {!isOnline && t('offline.searchUnavailable')}
         {isOnline && isSearching && t('search.searching')}
         {isOnline && !isSearching && error && t(`errors.${error.code}`)}

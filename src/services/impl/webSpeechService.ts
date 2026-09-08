@@ -1,127 +1,178 @@
-import type { SpeakOptions, SpeechService } from '@/services/interfaces'
+import type {
+  SpeakOptions,
+  SpeechMode,
+  SpeechService,
+  SpeechSnapshot,
+} from '@/services/interfaces/speechService'
 import type { ServiceLanguage } from '@/types'
-
-const LANG_TAG: Record<ServiceLanguage, string> = {
-  th: 'th-TH',
-  en: 'en-US',
-}
 
 interface QueueItem {
   text: string
-  lang: string
-  rate: number
+  options: SpeakOptions
+  expires: number
 }
 
-/**
- * SpeechService บน Web Speech API (SpeechSynthesis)
- *
- * จุดที่ต้องระวังของ API นี้ และวิธีรับมือในไฟล์นี้:
- * - getVoices() คืนค่าว่างในครั้งแรกบนหลายเบราว์เซอร์ -> ฟัง event `voiceschanged`
- * - iOS/Safari ไม่ยอมพูดถ้ายังไม่เคยมี user gesture -> เปิดทางด้วย unlock()
- * - พูดซ้อนกันจะสับสนมากสำหรับผู้ใช้ที่มองไม่เห็น -> จัดคิวเอง ไม่ยิง speak() รัวๆ
- * - ข้อความ critical (เช่น GPS หาย) ต้องได้ยินทันที -> ตัดคิวที่ค้างอยู่ทิ้ง
- */
-class WebSpeechService implements SpeechService {
+/** One output channel. Browser speech cannot observe or arbitrate a screen reader. */
+export class WebSpeechService implements SpeechService {
   private queue: QueueItem[] = []
   private current: SpeechSynthesisUtterance | null = null
-  private voices: SpeechSynthesisVoice[] = []
+  private currentItem: QueueItem | null = null
+  private timer: ReturnType<typeof setTimeout> | undefined
   private language: ServiceLanguage = 'th'
-  private unlocked = false
-
-  constructor() {
-    if (!this.isSupported()) return
-    this.loadVoices()
-    window.speechSynthesis.addEventListener('voiceschanged', this.loadVoices)
+  private retryArmed = false
+  private listeners = new Set<() => void>()
+  private snapshot: SpeechSnapshot = {
+    mode: 'reader',
+    text: '',
+    sequence: 0,
+    failed: false,
+    speaking: false,
   }
 
-  private loadVoices = () => {
-    this.voices = window.speechSynthesis.getVoices()
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
   }
-
-  isSupported(): boolean {
-    return typeof window !== 'undefined' && 'speechSynthesis' in window
+  getSnapshot = () => this.snapshot
+  private publish(update: Partial<SpeechSnapshot>) {
+    this.snapshot = { ...this.snapshot, ...update }
+    this.listeners.forEach((listener) => listener())
   }
-
-  hasVoiceFor(language: ServiceLanguage): boolean {
-    if (!this.isSupported()) return false
-    return this.pickVoice(LANG_TAG[language]) !== null
+  isSupported() {
+    return typeof window !== 'undefined' && typeof window.speechSynthesis?.speak === 'function'
   }
-
-  setLanguage(language: ServiceLanguage): void {
+  hasVoiceFor(language: ServiceLanguage) {
+    return (
+      this.isSupported() &&
+      window.speechSynthesis
+        .getVoices()
+        .some((v) => v.lang.replace('_', '-').toLowerCase().startsWith(language))
+    )
+  }
+  setLanguage(language: ServiceLanguage) {
     this.language = language
   }
-
-  /**
-   * ต้องเรียกจากใน event handler ของ user gesture (คลิก/แตะ) หนึ่งครั้ง
-   * มิฉะนั้น iOS จะเงียบไปเลยโดยไม่มี error ให้จับ
-   */
-  unlock(): void {
-    if (!this.isSupported() || this.unlocked) return
-    const silent = new SpeechSynthesisUtterance(' ')
-    silent.volume = 0
-    window.speechSynthesis.speak(silent)
-    this.unlocked = true
+  setMode(mode: SpeechMode) {
+    this.cancel()
+    this.publish({ mode, failed: false })
   }
-
-  speak(text: string, options: SpeakOptions = {}): void {
-    if (!this.isSupported() || !text.trim()) return
-
-    const lang = LANG_TAG[options.language ?? this.language]
-    const item: QueueItem = { text, lang, rate: options.rate ?? 1 }
-
-    if (options.priority === 'critical') {
-      this.queue = [item]
-      window.speechSynthesis.cancel()
-      this.current = null
-      this.drain()
-      return
+  // Called by a real button. The audible test is the unlock gesture, not a silent utterance.
+  unlock() {
+    if (this.snapshot.mode === 'app' && this.isSupported()) {
+      // Keep guidance suspended until an actual retry utterance finishes.
+      this.retryArmed = this.snapshot.failed
+      window.speechSynthesis.resume()
     }
-
-    this.queue.push(item)
-    if (!this.current) this.drain()
   }
-
-  cancel(): void {
-    if (!this.isSupported()) return
+  cancel() {
+    this.retryArmed = false
+    clearTimeout(this.timer)
+    this.current = null // Invalidate handlers BEFORE cancel emits asynchronous events.
+    this.currentItem = null
     this.queue = []
-    this.current = null
-    window.speechSynthesis.cancel()
+    if (this.isSupported()) window.speechSynthesis.cancel()
+    this.publish({ speaking: false, text: '' })
   }
-
-  private drain(): void {
-    const next = this.queue.shift()
-    if (!next) {
-      this.current = null
+  speak(text: string, options: SpeakOptions = {}) {
+    if (!text.trim()) return
+    const item = {
+      text,
+      options: { language: this.language, ...options },
+      expires: Date.now() + 20_000,
+    }
+    if (options.group) this.queue = this.queue.filter((q) => q.options.group !== options.group)
+    if (this.currentItem?.text === text || this.queue.some((q) => q.text === text)) return
+    if (options.priority === 'critical') {
+      this.queue = this.queue.filter((q) => q.options.priority === 'critical')
+      if (this.currentItem && this.currentItem.options.priority !== 'critical') {
+        clearTimeout(this.timer)
+        this.current = null
+        this.currentItem = null
+        if (this.isSupported()) window.speechSynthesis.cancel()
+      }
+    }
+    this.queue.push(item)
+    this.queue = this.queue.slice(-8)
+    if (!this.currentItem) this.drain()
+  }
+  private drain() {
+    clearTimeout(this.timer)
+    const item = this.queue.shift()
+    if (!item) {
+      this.currentItem = null
+      this.publish({ speaking: false })
       return
     }
-
-    const utterance = new SpeechSynthesisUtterance(next.text)
-    utterance.lang = next.lang
-    utterance.rate = next.rate
-    const voice = this.pickVoice(next.lang)
+    if (item.expires < Date.now()) {
+      this.drain()
+      return
+    }
+    this.currentItem = item
+    const recovering = this.retryArmed && this.snapshot.failed
+    this.retryArmed = false
+    const reader =
+      this.snapshot.mode === 'reader' ||
+      (this.snapshot.failed && !recovering) ||
+      !this.isSupported()
+    this.publish({
+      text: item.text,
+      sequence: this.snapshot.sequence + 1,
+      speaking: true,
+      failed: this.snapshot.failed || (!this.isSupported() && this.snapshot.mode === 'app'),
+    })
+    if (reader) {
+      // ARIA offers no completion event: pace announcements, never claim delivery was heard.
+      this.timer = setTimeout(
+        () => {
+          this.currentItem = null
+          this.drain()
+        },
+        Math.min(12000, Math.max(2500, item.text.length * 65)),
+      )
+      return
+    }
+    const utterance = new SpeechSynthesisUtterance(item.text)
+    this.current = utterance
+    utterance.lang = item.options.language === 'en' ? 'en-US' : 'th-TH'
+    utterance.rate = Math.min(1.4, Math.max(0.6, item.options.rate ?? 1))
+    const voices = window.speechSynthesis.getVoices()
+    const voice =
+      voices.find((v) => v.lang.replace('_', '-') === utterance.lang) ??
+      voices.find((v) => v.lang.replace('_', '-').startsWith(utterance.lang.slice(0, 2)))
     if (voice) utterance.voice = voice
-
-    const advance = () => {
+    const fail = () => {
+      if (this.current !== utterance) return
+      this.cancel()
+      this.publish({ failed: true, text: item.text, sequence: this.snapshot.sequence + 1 })
+    }
+    // A known voice list with no matching language must not silently use an
+    // unrelated language. Empty lists may still be loading in some browsers.
+    if (voices.length > 0 && !voice) {
+      fail()
+      return
+    }
+    utterance.onstart = () => {
+      if (this.current !== utterance) return
+      clearTimeout(this.timer)
+      this.timer = setTimeout(fail, Math.max(30_000, item.text.length * 180))
+    }
+    utterance.onend = () => {
+      if (this.current !== utterance) return
       this.current = null
+      this.currentItem = null
+      if (recovering) this.publish({ failed: false })
       this.drain()
     }
-    utterance.addEventListener('end', advance)
-    utterance.addEventListener('error', advance)
-
-    this.current = utterance
-    window.speechSynthesis.speak(utterance)
-  }
-
-  /** เลือกเสียงที่ตรงภาษาที่สุด — ถ้าไม่มีเสียงไทยติดตั้งอยู่ ปล่อยให้เบราว์เซอร์เลือกเอง */
-  private pickVoice(lang: string): SpeechSynthesisVoice | null {
-    if (this.voices.length === 0) this.loadVoices()
-    const prefix = lang.split('-')[0]
-    return (
-      this.voices.find((v) => v.lang === lang) ??
-      this.voices.find((v) => v.lang.startsWith(prefix)) ??
-      this.voices.find((v) => v.lang.replace('_', '-').startsWith(prefix)) ??
-      null
-    )
+    utterance.onerror = fail
+    this.timer = setTimeout(fail, 5000)
+    try {
+      window.speechSynthesis.resume()
+      window.speechSynthesis.speak(utterance)
+    } catch {
+      fail()
+    }
   }
 }
 

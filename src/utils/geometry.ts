@@ -46,3 +46,26 @@ export function distanceToPath(point: LatLng, path: LatLng[]): number {
   }
   return min
 }
+
+/** Distance along the remaining polyline, not a shortcut through buildings. */
+export function remainingPathDistance(point: LatLng, path: LatLng[]): number {
+  if (path.length < 2) return path.length ? distanceToPath(point, path) : Infinity
+  let nearest = Infinity
+  let remaining = 0
+  let tail = 0
+  for (let i = path.length - 2; i >= 0; i--) {
+    const a = project(path[i], point)
+    const b = project(path[i + 1], point)
+    const dx = b.x - a.x,
+      dy = b.y - a.y
+    const length = Math.hypot(dx, dy)
+    const t = length ? Math.max(0, Math.min(1, -(a.x * dx + a.y * dy) / (length * length))) : 0
+    const offset = Math.hypot(a.x + t * dx, a.y + t * dy)
+    if (offset < nearest) {
+      nearest = offset
+      remaining = (1 - t) * length + tail
+    }
+    tail += length
+  }
+  return remaining
+}

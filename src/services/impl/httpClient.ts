@@ -1,98 +1,108 @@
 import { ServiceError } from '@/types'
 
+// Respect server-wide cooldowns for other calls too, not just this retry loop.
+const cooldowns = new Map<string, number>()
+
 export interface FetchJsonOptions {
-  /** ยกเลิกจากฝั่งผู้เรียก (เช่น ผู้ใช้พิมพ์คำค้นใหม่) */
   signal?: AbortSignal
-  /** หมดเวลาต่อหนึ่งครั้งที่ลอง */
   timeoutMs?: number
-  /** จำนวนครั้งที่ลองซ้ำหลังครั้งแรกล้มเหลว */
   retries?: number
-  /** แจ้งชั้นบนว่ากำลังจะลองใหม่ เพื่อเอาไปพูดบอกผู้ใช้ */
   onRetry?: (attempt: number, delayMs: number, error: ServiceError) => void
+  /** Schedule EVERY network attempt, including retries, through the provider queue. */
+  schedule?: <T>(task: () => Promise<T>) => Promise<T>
 }
-
-const DEFAULT_TIMEOUT_MS = 12_000
-const DEFAULT_RETRIES = 2
-const BACKOFF_BASE_MS = 800
-const BACKOFF_MAX_MS = 8_000
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-/** exponential backoff + jitter — กันยิงซ้ำพร้อมกันจนโดนบล็อกหนักกว่าเดิม */
-function backoffDelay(attempt: number): number {
-  const base = Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_MAX_MS)
-  return base + Math.random() * 300
-}
-
-function toServiceError(err: unknown, callerAborted: boolean): ServiceError {
-  if (err instanceof ServiceError) return err
-  if (callerAborted) return new ServiceError('ABORTED', 'คำขอถูกยกเลิก', { retryable: false })
-  if (err instanceof DOMException && err.name === 'TimeoutError') {
-    return new ServiceError('TIMEOUT', 'คำขอใช้เวลานานเกินไป', { cause: err })
-  }
-  if (err instanceof DOMException && err.name === 'AbortError') {
-    return new ServiceError('ABORTED', 'คำขอถูกยกเลิก', { retryable: false, cause: err })
-  }
-  // fetch โยน TypeError เมื่อเน็ตหลุด / DNS ล้ม / CORS พัง
-  return new ServiceError('NETWORK', 'เชื่อมต่อเครือข่ายไม่ได้', { cause: err })
-}
-
-function fromResponse(res: Response): ServiceError {
-  if (res.status === 429) {
-    return new ServiceError('RATE_LIMITED', 'ถูกจำกัดจำนวนคำขอ', { retryable: true })
-  }
-  if (res.status === 404) {
-    return new ServiceError('NOT_FOUND', 'ไม่พบข้อมูล', { retryable: false })
-  }
-  if (res.status >= 500) {
-    return new ServiceError('PROVIDER_ERROR', `เซิร์ฟเวอร์ตอบ ${res.status}`, { retryable: true })
-  }
-  return new ServiceError('PROVIDER_ERROR', `เซิร์ฟเวอร์ตอบ ${res.status}`, { retryable: false })
-}
-
-/**
- * เรียก API แบบมี timeout + retry แบบ exponential backoff
- *
- * ทำไมต้องมีชั้นนี้: ระหว่างนำทาง ถ้าเน็ตกระตุกแล้วปล่อยให้ error หลุดขึ้นไปทันที
- * ผู้ใช้ที่มองไม่เห็นจะเดินต่อโดยไม่รู้ว่าระบบหยุดทำงานไปแล้ว
- * ชั้นนี้จึงพยายามกู้เองก่อน และรายงานผ่าน onRetry ให้ชั้นบนพูดบอกได้ทันทีถ้าลองซ้ำแล้วยังไม่ผ่าน
- */
-export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}): Promise<T> {
-  const { signal, timeoutMs = DEFAULT_TIMEOUT_MS, retries = DEFAULT_RETRIES, onRetry } = options
-
-  let lastError: ServiceError | null = null
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
+export function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
     if (signal?.aborted) {
-      throw new ServiceError('ABORTED', 'คำขอถูกยกเลิก', { retryable: false })
+      reject(new ServiceError('ABORTED'))
+      return
     }
-    // ไม่มีเน็ตแน่ๆ ก็ไม่ต้องเสียเวลารอ timeout
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      lastError = new ServiceError('NETWORK', 'อุปกรณ์ออฟไลน์')
-      break
+    const abort = () => {
+      clearTimeout(timer)
+      reject(new ServiceError('ABORTED'))
     }
-
-    const timeout = AbortSignal.timeout(timeoutMs)
-    const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
-
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', abort)
+      resolve()
+    }, ms)
+    signal?.addEventListener('abort', abort, { once: true })
+  })
+}
+export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}): Promise<T> {
+  const { signal, timeoutMs = 12000, retries = 2, onRetry, schedule = (task) => task() } = options
+  const provider = new URL(url, window.location.href).origin
+  for (let attempt = 0; ; attempt++) {
+    let retryAfter = 0
     try {
-      const res = await fetch(url, {
-        signal: combined,
-        headers: { Accept: 'application/json' },
+      return await schedule(async () => {
+        if (signal?.aborted) throw new ServiceError('ABORTED')
+        if ((cooldowns.get(provider) ?? 0) > Date.now())
+          throw new ServiceError('RATE_LIMITED', 'Provider cooldown', { retryable: false })
+        if (typeof navigator !== 'undefined' && !navigator.onLine) throw new ServiceError('NETWORK')
+        const controller = new AbortController()
+        const abort = () => controller.abort()
+        signal?.addEventListener('abort', abort, { once: true })
+        let timedOut = false
+        const timer = setTimeout(() => {
+          timedOut = true
+          controller.abort()
+        }, timeoutMs)
+        try {
+          const response = await fetch(url, {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' },
+          })
+          if (!response.ok) {
+            const header = response.headers.get('Retry-After')
+            if (header)
+              retryAfter = Math.max(
+                0,
+                /^\d+$/.test(header) ? Number(header) * 1000 : Date.parse(header) - Date.now(),
+              )
+            if (
+              (response.status === 429 || response.status === 503) &&
+              Number.isFinite(retryAfter)
+            ) {
+              cooldowns.set(
+                provider,
+                Date.now() + Math.max(retryAfter, response.status === 429 ? 1100 : 0),
+              )
+            }
+            throw new ServiceError(
+              response.status === 429
+                ? 'RATE_LIMITED'
+                : response.status === 404
+                  ? 'NOT_FOUND'
+                  : 'PROVIDER_ERROR',
+              String(response.status),
+              { retryable: response.status === 429 || response.status >= 500 },
+            )
+          }
+          try {
+            if ((cooldowns.get(provider) ?? 0) <= Date.now()) cooldowns.delete(provider)
+            return (await response.json()) as T
+          } catch (error) {
+            throw new ServiceError('PROVIDER_ERROR', 'Invalid response', {
+              cause: error,
+              retryable: false,
+            })
+          }
+        } catch (error) {
+          if (signal?.aborted) throw new ServiceError('ABORTED')
+          if (timedOut) throw new ServiceError('TIMEOUT')
+          throw error
+        } finally {
+          clearTimeout(timer)
+          signal?.removeEventListener('abort', abort)
+        }
       })
-      if (!res.ok) throw fromResponse(res)
-      return (await res.json()) as T
-    } catch (err) {
-      const error = toServiceError(err, signal?.aborted === true)
-      lastError = error
-
-      if (!error.retryable || attempt === retries) break
-
-      const delay = backoffDelay(attempt)
+    } catch (cause) {
+      const error =
+        cause instanceof ServiceError ? cause : new ServiceError('NETWORK', undefined, { cause })
+      if (!error.retryable || attempt >= retries || retryAfter > 60000) throw error
+      const delay = Math.max(retryAfter || 0, 1100 * 2 ** attempt + Math.random() * 300)
       onRetry?.(attempt + 1, delay, error)
-      await sleep(delay)
+      await abortableDelay(delay, signal)
     }
   }
-
-  throw lastError ?? new ServiceError('UNKNOWN')
 }

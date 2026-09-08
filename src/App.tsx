@@ -1,20 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BigButton } from '@/components/BigButton'
 import { AppearancePanel } from '@/components/AppearancePanel'
+import { BigButton } from '@/components/BigButton'
+import { EmergencyDialog } from '@/components/EmergencyDialog'
 import { GpsStatusPanel } from '@/components/GpsStatusPanel'
 import { LanguageToggle } from '@/components/LanguageToggle'
-import { OfflineBanner } from '@/components/OfflineBanner'
-import { MapControls } from '@/components/MapControls'
 import { MapView } from '@/components/MapView'
 import { NavigationPanel } from '@/components/NavigationPanel'
+import { OfflineBanner } from '@/components/OfflineBanner'
 import { PermissionGate } from '@/components/PermissionGate'
 import { SafetyPanel } from '@/components/SafetyPanel'
 import { SearchPanel } from '@/components/SearchPanel'
 import { SharedLocationView } from '@/components/SharedLocationView'
+import { SosButton } from '@/components/SosButton'
 import { UpdatePrompt } from '@/components/UpdatePrompt'
+import { VoiceControls } from '@/components/VoiceControls'
 import { useAppearance } from '@/hooks/useAppearance'
-import { useEmergency } from '@/hooks/useEmergency'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { useGpsAnnouncer } from '@/hooks/useGpsAnnouncer'
 import { useHazardAlerts } from '@/hooks/useHazardAlerts'
@@ -25,251 +26,288 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useSettings } from '@/hooks/useSettings'
 import { useShareRoute } from '@/hooks/useShareRoute'
 import { useSpeech } from '@/hooks/useSpeech'
-import { useVoiceAvailability } from '@/hooks/useVoiceAvailability'
 import { useWhereAmI } from '@/hooks/useWhereAmI'
-import type { Place } from '@/types'
+import { speechService } from '@/services'
 import { speakDistance } from '@/utils/format'
 import { vibrate } from '@/utils/vibration'
 
-/** ระยะที่เริ่มสั่นเตือนก่อนถึงจุดเลี้ยว (เมตร) — ตรงกับจังหวะที่เสียงเตือนดัง */
-const MANEUVER_VIBRATION_DISTANCE_M = 20
-
-/**
- * ตาทิพย์ Navigator
- * Phase 4: เพิ่มฟีเจอร์ความปลอดภัย — SOS, แชร์ตำแหน่ง, เตือนจุดเสี่ยง, สั่นเตือน
- */
 export default function App() {
   const { t } = useTranslation()
   const [started, setStarted] = useState(false)
+  const [showMap, setShowMap] = useState(false)
+  const [emergencyOpen, setEmergencyOpen] = useState(false)
+  const [now, setNow] = useState(Date.now)
+  const [visible, setVisible] = useState(() => !document.hidden)
   const [follow, setFollow] = useState(true)
-  const [showSafety, setShowSafety] = useState(false)
-  const [showAppearance, setShowAppearance] = useState(false)
-
-  const shareRoute = useShareRoute()
   const settings = useSettings()
-  useAppearance(settings.settings)
-  const isOnline = useOnlineStatus(started)
+  const shareRoute = useShareRoute()
   const geo = useGeolocation()
-  const nav = useNavigation(geo.position)
-  const whereAmI = useWhereAmI(geo.position)
-  const { supported: speechSupported, speak, unlock } = useSpeech()
-
-  const emergency = useEmergency({
-    position: geo.position,
-    vibrationEnabled: settings.settings.vibrationEnabled,
-  })
-  const liveShare = useLiveShare({
-    position: geo.position,
+  const audio = useSyncExternalStore(speechService.subscribe, speechService.getSnapshot)
+  const { speak, unlock, supported } = useSpeech()
+  const online = useOnlineStatus(started)
+  useAppearance(settings.settings)
+  useEffect(() => {
+    const change = () => {
+      setVisible(!document.hidden)
+      setNow(Date.now())
+      speechService.cancel()
+    }
+    document.addEventListener('visibilitychange', change)
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => {
+      document.removeEventListener('visibilitychange', change)
+      clearInterval(timer)
+    }
+  }, [])
+  const gpsUsable =
+    !!geo.position &&
+    !geo.error &&
+    !geo.isStale &&
+    geo.position.accuracy <= 30 &&
+    now - geo.position.timestamp <= 15000
+  const usable = gpsUsable && visible && !audio.failed && !emergencyOpen
+  const nav = useNavigation(geo.position, usable)
+  const active = nav.status !== 'idle' && nav.status !== 'arrived'
+  const where = useWhereAmI(gpsUsable ? geo.position : null)
+  const share = useLiveShare({
+    position: gpsUsable ? geo.position : null,
     destination: nav.destination,
     hasArrived: nav.status === 'arrived',
   })
-
-  useVoiceAvailability(started)
-  useGpsAnnouncer(geo, started)
-  useNavigationAnnouncer(nav, started)
+  const wasPaused = useRef(false)
+  const wasBlocked = useRef(false)
+  useEffect(() => {
+    const paused = active && !usable
+    const blocked = paused || nav.isOffRoute || nav.isRecalculating || nav.status === 'error'
+    if (blocked && !wasBlocked.current) speechService.cancel()
+    if (paused !== wasPaused.current) {
+      if (paused || (active && !blocked))
+        speak(t(paused ? 'nav.paused' : 'nav.resumed'), { priority: 'critical' })
+    }
+    wasPaused.current = paused
+    wasBlocked.current = blocked
+  }, [active, usable, nav.isOffRoute, nav.isRecalculating, nav.status, speak, t])
+  useGpsAnnouncer(geo, started && !active)
+  useNavigationAnnouncer(nav, started, audio.mode)
   useHazardAlerts(nav, {
     enabled: started && settings.settings.hazardAlertsEnabled,
     vibrationEnabled: settings.settings.vibrationEnabled,
   })
-
-  // ปุ่มแรกที่ผู้ใช้แตะ ทำสองอย่างพร้อมกัน: ปลดล็อกเสียง (iOS) แล้วค่อยขอสิทธิ์ GPS
-  const handleStart = useCallback(() => {
-    unlock()
-    setStarted(true)
-    geo.start()
-  }, [geo, unlock])
-
-  const handleRecenter = useCallback(() => {
-    setFollow(true)
-    speak(t('map.recenterSpoken'))
-  }, [speak, t])
-
-  const handleSelectPlace = useCallback(
-    (place: Place) => {
-      setFollow(true)
-      nav.start(place)
-    },
-    [nav],
-  )
-
-  const handleRepeatStatus = useCallback(() => {
-    if (geo.error) {
-      speak(t(`errors.${geo.error.code}_SPOKEN`), { priority: 'critical' })
-      return
-    }
-    if (!geo.position) {
-      speak(t('gps.acquiringSpoken'))
-      return
-    }
-    speak(t('actions.statusSpoken', { meters: Math.round(geo.position.accuracy) }))
-  }, [geo.error, geo.position, speak, t])
-
-  // พูดคำแนะนำปัจจุบันซ้ำ สำหรับตอนที่ฟังไม่ทันหรือมีเสียงรบกวน
-  const handleRepeatInstruction = useCallback(() => {
-    const step = nav.progress?.nextStep
-    if (!step) {
-      speak(t('nav.calculatingSpoken'), { priority: 'critical' })
-      return
-    }
-    const distance = speakDistance(nav.progress!.distanceToNextManeuver)
-    const maneuver = t(`maneuver.${step.maneuver}`)
-    speak(
-      step.streetName
-        ? t('nav.stepInstructionWithStreet', { distance, maneuver, street: step.streetName })
-        : t('nav.stepInstruction', { distance, maneuver }),
-      { priority: 'critical' },
-    )
-  }, [nav.progress, speak, t])
-
-  const handleSos = useCallback(
-    (contactPhone?: string) => {
-      void emergency.trigger(contactPhone)
-    },
-    [emergency],
-  )
-
-  // สั่นเตือนควบคู่กับเสียงเมื่อใกล้ถึงจุดเลี้ยว เผื่ออยู่ในที่เสียงดัง
-  // ต้องล็อกไว้ว่าสั่นไปแล้วสำหรับจุดเลี้ยวไหน ไม่งั้นจะสั่นซ้ำทุกครั้งที่ GPS อัปเดต
-  // (ประมาณวินาทีละครั้ง) ซึ่งกวนผู้ใช้และกินแบตเตอรี่
-  const nextManeuverDistance = nav.progress?.distanceToNextManeuver
-  const currentStepIndex = nav.progress?.currentStepIndex
-  const vibrationEnabled = settings.settings.vibrationEnabled
-  const vibratedStepRef = useRef<number | null>(null)
+  const vibrated = useRef('')
   useEffect(() => {
-    if (!started || nextManeuverDistance === undefined || currentStepIndex === undefined) return
-    if (nextManeuverDistance > MANEUVER_VIBRATION_DISTANCE_M) return
-    if (vibratedStepRef.current === currentStepIndex) return
-    vibratedStepRef.current = currentStepIndex
-    vibrate('maneuver', vibrationEnabled)
-  }, [started, currentStepIndex, nextManeuverDistance, vibrationEnabled])
+    if (
+      nav.status !== 'navigating' ||
+      !usable ||
+      !nav.progress ||
+      nav.progress.distanceToNextManeuver > 20
+    )
+      return
+    const key = nav.route?.id + ':' + nav.progress.currentStepIndex
+    if (key === vibrated.current) return
+    vibrated.current = key
+    vibrate('maneuver', settings.settings.vibrationEnabled)
+  }, [nav.status, nav.progress, nav.route?.id, usable, settings.settings.vibrationEnabled])
 
-  // ผู้รับลิงก์แชร์ตำแหน่งจะเห็นหน้านี้แทนหน้าแอปหลัก
-  if (shareRoute.isShareView) {
-    return <SharedLocationView payload={shareRoute.payload} />
+  const repeat = useCallback(() => {
+    speechService.cancel()
+    unlock()
+    if (active && !usable) {
+      speak(t('nav.paused'), { priority: 'critical' })
+      return
+    }
+    if (nav.status === 'error') {
+      speak(t(`errors.${nav.error?.code ?? 'UNKNOWN'}_SPOKEN`), { priority: 'critical' })
+      return
+    }
+    if (nav.isOffRoute || nav.isRecalculating) {
+      speak(t('nav.offRouteSpoken'), { priority: 'critical' })
+      return
+    }
+    if (nav.status === 'arrived') {
+      speak(
+        t('nav.arrivedNearSpoken', {
+          destination: nav.destination?.name,
+          distance: speakDistance(nav.arrivalOffset ?? 0),
+        }),
+      )
+      return
+    }
+    const step = nav.progress?.nextStep
+    if (step && nav.progress) {
+      speak(
+        t(step.streetName ? 'nav.stepInstructionWithStreet' : 'nav.stepInstruction', {
+          distance: speakDistance(nav.progress.distanceToNextManeuver),
+          maneuver: t('maneuver.' + step.maneuver),
+          street: step.streetName,
+        }),
+        { group: 'navigation', priority: 'critical' },
+      )
+    } else speak(t(active ? 'nav.calculatingSpoken' : 'gps.acquiringSpoken'))
+  }, [
+    active,
+    usable,
+    nav.status,
+    nav.error,
+    nav.isOffRoute,
+    nav.isRecalculating,
+    nav.destination,
+    nav.arrivalOffset,
+    nav.progress,
+    speak,
+    t,
+    unlock,
+  ])
+
+  const openEmergency = () => {
+    speechService.cancel()
+    setEmergencyOpen(true)
   }
-
-  const isNavigating = nav.status !== 'idle'
+  const stopNavigation = () => {
+    nav.stop()
+    speak(t('nav.stoppedSpoken'), { priority: 'critical' })
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+    )
+  }
+  if (shareRoute.isShareView) return <SharedLocationView payload={shareRoute.payload} />
 
   return (
-    <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-      <a href="#main-controls" className="skip-link">
+    <div className="app-shell">
+      <a
+        href="#main-controls"
+        className="skip-link"
+        onClick={() => document.getElementById('main-controls')?.focus()}
+      >
         {t('a11y.skipToMain')}
       </a>
-
-      <UpdatePrompt />
-      {!isOnline && <OfflineBanner />}
-
-      <header className="flex items-center justify-between gap-3 bg-brand-600 px-4 py-3 text-white">
+      <header className="app-header">
         <div>
-          <h1 className="text-xl font-bold">{t('app.title')}</h1>
-          <p className="text-sm opacity-90">{t('app.subtitle')}</p>
+          <h1 className="text-2xl font-bold">{t('app.title')}</h1>
+          <p>{t('app.subtitle')}</p>
         </div>
         <LanguageToggle />
       </header>
-
-      {/* ครอบเนื้อหาหลักด้วย main หนึ่งอัน เพื่อให้ screen reader ข้ามส่วนหัวได้ */}
-      <main className="flex flex-1 flex-col overflow-hidden">
-        {!started ? (
-          <PermissionGate onStart={handleStart} speechSupported={speechSupported} />
-        ) : (
-          <>
-            <div className="relative flex-1">
-              <MapView
+      <UpdatePrompt busy={active} />
+      {!online && <OfflineBanner />}
+      <main id="main-controls" tabIndex={-1}>
+        <div className="emergency-access">
+          <SosButton
+            onTrigger={openEmergency}
+            vibrationEnabled={settings.settings.vibrationEnabled}
+          />
+        </div>
+        {started && (
+          <section className="primary-controls" aria-label={t('a11y.mainLabel')}>
+            {nav.status === 'idle' ? (
+              <SearchPanel
                 position={geo.position}
-                isPoorAccuracy={geo.isPoorAccuracy}
-                isStale={geo.isStale}
-                follow={follow}
-                onUserPan={() => setFollow(false)}
-                route={nav.route}
+                onSelect={(place) => {
+                  speechService.cancel()
+                  nav.start(place)
+                  requestAnimationFrame(() => document.getElementById('navigation-panel')?.focus())
+                }}
+                isOnline={online}
               />
-              <MapControls
-                follow={follow}
-                onRecenter={handleRecenter}
-                disabled={geo.position === null}
-              />
-            </div>
-
-            <section
-              id="main-controls"
-              aria-label={t('a11y.mainLabel')}
-              className="max-h-[55%] overflow-y-auto"
+            ) : (
+              <NavigationPanel nav={{ ...nav, stop: stopNavigation }} onRepeat={repeat} />
+            )}
+            <BigButton variant="secondary" onClick={where.announce} disabled={where.isLoading}>
+              {t('whereAmI.button')}
+            </BigButton>
+            {where.address && <p>{where.address}</p>}
+            <GpsStatusPanel
+              geo={geo}
+              onRepeatStatus={() => {
+                unlock()
+                speak(
+                  !gpsUsable
+                    ? t('nav.paused')
+                    : t('actions.statusSpoken', { meters: Math.round(geo.position!.accuracy) }),
+                )
+              }}
+            />
+          </section>
+        )}
+        <VoiceControls />
+        {!started && (
+          <PermissionGate
+            speechSupported={supported}
+            onStart={() => {
+              unlock()
+              speak(t('gps.acquiringSpoken'))
+              setStarted(true)
+              geo.start()
+            }}
+          />
+        )}
+        <details className="settings-section">
+          <summary>{t('settings.openSettings')}</summary>
+          <SafetyPanel
+            settings={settings}
+            onSos={openEmergency}
+            hasPosition={gpsUsable}
+            share={{
+              isSharing: share.isSharing,
+              expiresAt: share.session?.expiresAt ?? null,
+              onStart: () => void share.start(),
+              onSendUpdate: () => void share.sendUpdate(),
+              onStop: share.stop,
+            }}
+          />
+        </details>
+        <details className="settings-section">
+          <summary>{t('appearance.openPanel')}</summary>
+          <AppearancePanel settings={settings} />
+        </details>
+        {started && (
+          <>
+            <BigButton
+              variant="secondary"
+              aria-expanded={showMap}
+              aria-controls="visual-map"
+              onClick={() => setShowMap((value) => !value)}
             >
-              {isNavigating ? (
-                <NavigationPanel nav={nav} onRepeat={handleRepeatInstruction} />
-              ) : (
-                <SearchPanel
-                  position={geo.position}
-                  onSelect={handleSelectPlace}
-                  isOnline={isOnline}
-                />
+              {t(showMap ? 'map.hide' : 'map.show')}
+            </BigButton>
+            <div id="visual-map" hidden={!showMap}>
+              {showMap && (
+                <>
+                  <div className="map-frame">
+                    <MapView
+                      position={geo.position}
+                      isPoorAccuracy={geo.isPoorAccuracy}
+                      isStale={geo.isStale}
+                      follow={follow}
+                      onUserPan={() => setFollow(false)}
+                      route={nav.route}
+                    />
+                  </div>
+                  <BigButton variant="secondary" onClick={() => setFollow(true)}>
+                    {t('map.recenter')}
+                  </BigButton>
+                </>
               )}
-
-              <div className="border-t-2 border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-                <BigButton
-                  variant="secondary"
-                  onClick={whereAmI.announce}
-                  disabled={whereAmI.isLoading}
-                  className="w-full"
-                >
-                  {t('whereAmI.button')}
-                </BigButton>
-                <BigButton
-                  variant="secondary"
-                  onClick={() => setShowSafety((prev) => !prev)}
-                  aria-expanded={showSafety}
-                  aria-controls="safety-panel"
-                  className="mt-2 w-full"
-                >
-                  {showSafety ? t('settings.closeSettings') : t('settings.openSettings')}
-                </BigButton>
-                <BigButton
-                  variant="secondary"
-                  onClick={() => setShowAppearance((prev) => !prev)}
-                  aria-expanded={showAppearance}
-                  aria-controls="appearance-panel"
-                  className="mt-2 w-full"
-                >
-                  {showAppearance ? t('appearance.closePanel') : t('appearance.openPanel')}
-                </BigButton>
-                {/* แสดงที่อยู่เต็มไว้ให้อ่าน ส่วนที่พูดออกเสียงเป็นฉบับย่อ */}
-                {whereAmI.address && (
-                  <p
-                    aria-live="polite"
-                    className="mt-2 text-base text-slate-700 dark:text-slate-200"
-                  >
-                    {whereAmI.address}
-                  </p>
-                )}
-              </div>
-
-              {showSafety && (
-                <div id="safety-panel">
-                  <SafetyPanel
-                    settings={settings}
-                    onSos={handleSos}
-                    hasPosition={geo.position !== null}
-                    share={{
-                      isSharing: liveShare.isSharing,
-                      expiresAt: liveShare.session?.expiresAt ?? null,
-                      onStart: () => void liveShare.start(),
-                      onSendUpdate: () => void liveShare.sendUpdate(),
-                      onStop: liveShare.stop,
-                    }}
-                  />
-                </div>
-              )}
-
-              {showAppearance && (
-                <div id="appearance-panel">
-                  <AppearancePanel settings={settings} />
-                </div>
-              )}
-
-              <GpsStatusPanel geo={geo} onRepeatStatus={handleRepeatStatus} />
-            </section>
+            </div>
           </>
         )}
+        <p className="safety-note">{t('nav.safetyNote')}</p>
+        <footer>
+          <a
+            className="inline-flex min-h-touch items-center underline"
+            href="https://www.openstreetmap.org/copyright"
+          >
+            © OpenStreetMap contributors
+          </a>
+          <p>Routing: FOSSGIS / OSRM</p>
+        </footer>
       </main>
+      {emergencyOpen && (
+        <EmergencyDialog
+          contacts={settings.settings.emergencyContacts}
+          position={geo.position}
+          onClose={() => setEmergencyOpen(false)}
+        />
+      )}
     </div>
   )
 }

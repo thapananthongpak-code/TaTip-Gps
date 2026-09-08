@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { GPS_POOR_ACCURACY_M } from '@/services'
-import type { GeoError, GeoErrorCode, GeoPosition } from '@/types'
+import type { GeoError, GeoPosition } from '@/types'
 
 export type GeoStatus =
   /** ยังไม่เริ่ม — รอผู้ใช้กดปุ่มอนุญาต */
@@ -36,142 +36,118 @@ export interface UseGeolocationResult {
   retry: () => void
 }
 
-const DEFAULT_STALE_MS = 20_000
-const DEFAULT_TIMEOUT_MS = 15_000
-
-/** แปลงรหัสข้อผิดพลาดของเบราว์เซอร์เป็นรหัสกลางของแอป */
-function toGeoErrorCode(err: GeolocationPositionError): GeoErrorCode {
-  switch (err.code) {
-    case err.PERMISSION_DENIED:
-      return 'PERMISSION_DENIED'
-    case err.TIMEOUT:
-      return 'TIMEOUT'
-    default:
-      return 'POSITION_UNAVAILABLE'
-  }
-}
-
-/**
- * ติดตามตำแหน่งแบบ real-time ด้วย watchPosition
- *
- * ครอบเคสที่ผู้ใช้ตาบอดจะเดือดร้อนถ้าไม่จัดการ:
- * - ปฏิเสธสิทธิ์ -> คืน error PERMISSION_DENIED ให้ชั้นบนพูดบอกและมีปุ่มลองใหม่
- * - อยู่ในตึก/อับสัญญาณ -> POSITION_UNAVAILABLE โดยยังไม่หยุด watch เผื่อสัญญาณกลับมาเอง
- * - หาตำแหน่งแรกนานเกินไป -> TIMEOUT
- * - เคยได้ตำแหน่งแล้วสัญญาณหายกลางทาง -> isStale (watchPosition บางแพลตฟอร์มเงียบไปเฉยๆ ไม่ยิง error)
- * - ความแม่นยำแย่ -> isPoorAccuracy
- */
+/** Initial acquisition and freshness have independent deadlines. */
 export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocationResult {
   const {
     poorAccuracyThreshold = GPS_POOR_ACCURACY_M,
-    staleAfterMs = DEFAULT_STALE_MS,
-    timeoutMs = DEFAULT_TIMEOUT_MS,
+    staleAfterMs = 15000,
+    timeoutMs = 15000,
   } = options
-
   const [status, setStatus] = useState<GeoStatus>('idle')
   const [position, setPosition] = useState<GeoPosition | null>(null)
   const [error, setError] = useState<GeoError | null>(null)
   const [isStale, setIsStale] = useState(false)
-
-  const watchIdRef = useRef<number | null>(null)
-  const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const clearStaleTimer = useCallback(() => {
-    if (staleTimerRef.current !== null) {
-      clearTimeout(staleTimerRef.current)
-      staleTimerRef.current = null
-    }
+  const watch = useRef<number | null>(null)
+  const generation = useRef(0)
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const cleanup = useCallback(() => {
+    generation.current++
+    clearTimeout(timer.current)
+    if (watch.current !== null) navigator.geolocation?.clearWatch(watch.current)
+    watch.current = null
   }, [])
-
-  const armStaleTimer = useCallback(() => {
-    clearStaleTimer()
-    staleTimerRef.current = setTimeout(() => setIsStale(true), staleAfterMs)
-  }, [clearStaleTimer, staleAfterMs])
-
   const stop = useCallback(() => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current)
-      watchIdRef.current = null
-    }
-    clearStaleTimer()
-    setIsStale(false)
+    cleanup()
     setStatus('idle')
-  }, [clearStaleTimer])
-
+    setPosition(null)
+    setError(null)
+    setIsStale(false)
+  }, [cleanup])
   const start = useCallback(() => {
-    // ตรวจข้อจำกัดของสภาพแวดล้อมก่อน จะได้บอกผู้ใช้ตรงสาเหตุ ไม่ใช่ปล่อยให้ timeout ไปเฉยๆ
-    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-      setError({ code: 'UNSUPPORTED' })
-      setStatus('error')
-      return
-    }
+    cleanup()
+    const id = generation.current
+    setError(null)
+    setPosition(null)
+    setIsStale(false)
     if (!window.isSecureContext) {
       setError({ code: 'INSECURE_CONTEXT' })
       setStatus('error')
       return
     }
-    if (watchIdRef.current !== null) return
-
-    setError(null)
-    setIsStale(false)
-    setStatus('acquiring')
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        setPosition({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-          heading: Number.isFinite(pos.coords.heading) ? pos.coords.heading : null,
-          speed: Number.isFinite(pos.coords.speed) ? pos.coords.speed : null,
-          timestamp: pos.timestamp,
-        })
-        setError(null)
-        setIsStale(false)
-        setStatus('tracking')
-        armStaleTimer()
-      },
-      (err) => {
-        const code = toGeoErrorCode(err)
-        setError({ code, raw: err.message })
-
-        // ถูกปฏิเสธสิทธิ์ = จบ ไม่ต้อง watch ต่อให้เปลืองแบต
-        if (code === 'PERMISSION_DENIED') {
-          if (watchIdRef.current !== null) {
-            navigator.geolocation.clearWatch(watchIdRef.current)
-            watchIdRef.current = null
-          }
-          clearStaleTimer()
-          setStatus('error')
-          return
-        }
-
-        // สัญญาณหายชั่วคราว: ถ้าเคยได้ตำแหน่งแล้วให้คงโหมดติดตามไว้ เผื่อสัญญาณกลับมาเอง
-        setStatus((prev) => (prev === 'tracking' ? 'tracking' : 'error'))
-        setIsStale(true)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: timeoutMs,
-        maximumAge: 0,
-      },
-    )
-  }, [armStaleTimer, clearStaleTimer, timeoutMs])
-
-  const retry = useCallback(() => {
-    stop()
-    // ให้ state รอบก่อนเคลียร์ก่อนค่อยเริ่มใหม่
-    queueMicrotask(start)
-  }, [start, stop])
-
-  useEffect(() => {
-    return () => {
-      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current)
-      if (staleTimerRef.current !== null) clearTimeout(staleTimerRef.current)
+    if (!navigator.geolocation) {
+      setError({ code: 'UNSUPPORTED' })
+      setStatus('error')
+      return
     }
-  }, [])
-
-  const isPoorAccuracy = position !== null && position.accuracy > poorAccuracyThreshold
-
-  return { status, position, error, isPoorAccuracy, isStale, start, stop, retry }
+    setStatus('acquiring')
+    timer.current = setTimeout(() => {
+      if (id !== generation.current) return
+      setError({ code: 'TIMEOUT' })
+      setStatus('error')
+      setIsStale(true)
+    }, timeoutMs)
+    try {
+      watch.current = navigator.geolocation.watchPosition(
+        (fix) => {
+          if (id !== generation.current) return
+          const { latitude: lat, longitude: lng, accuracy, heading, speed } = fix.coords
+          if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lng) ||
+            Math.abs(lat) > 90 ||
+            Math.abs(lng) > 180 ||
+            !Number.isFinite(accuracy) ||
+            accuracy < 0 ||
+            !Number.isFinite(fix.timestamp) ||
+            fix.timestamp > Date.now() + 5000
+          ) {
+            setError({ code: 'POSITION_UNAVAILABLE' })
+            setIsStale(true)
+            return
+          }
+          setPosition({ lat, lng, accuracy, heading, speed, timestamp: fix.timestamp })
+          setError(null)
+          setStatus('tracking')
+          const age = Date.now() - fix.timestamp
+          setIsStale(age >= staleAfterMs)
+          clearTimeout(timer.current)
+          timer.current = setTimeout(
+            () => {
+              if (id === generation.current) setIsStale(true)
+            },
+            Math.max(0, staleAfterMs - age),
+          )
+        },
+        (failure) => {
+          if (id !== generation.current) return
+          const code =
+            failure.code === 1
+              ? 'PERMISSION_DENIED'
+              : failure.code === 3
+                ? 'TIMEOUT'
+                : 'POSITION_UNAVAILABLE'
+          setError({ code })
+          setIsStale(true)
+          setStatus('error')
+          if (code === 'PERMISSION_DENIED') cleanup()
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: timeoutMs },
+      )
+    } catch {
+      cleanup()
+      setError({ code: 'POSITION_UNAVAILABLE' })
+      setStatus('error')
+    }
+  }, [cleanup, staleAfterMs, timeoutMs])
+  useEffect(() => cleanup, [cleanup])
+  return {
+    status,
+    position,
+    error,
+    isStale,
+    isPoorAccuracy: !!position && position.accuracy > poorAccuracyThreshold,
+    start,
+    stop,
+    retry: start,
+  }
 }

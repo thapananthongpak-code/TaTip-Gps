@@ -15,7 +15,7 @@ export function useOnlineStatus(enabled: boolean) {
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
   )
-  const wasOnlineRef = useRef(isOnline)
+  const wasOnlineRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     const goOnline = () => setIsOnline(true)
@@ -30,7 +30,9 @@ export function useOnlineStatus(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled || wasOnlineRef.current === isOnline) return
+    const first = wasOnlineRef.current === null
     wasOnlineRef.current = isOnline
+    if (first && isOnline) return
     speak(isOnline ? t('offline.restoredSpoken') : t('offline.lostSpoken'), {
       priority: 'critical',
     })

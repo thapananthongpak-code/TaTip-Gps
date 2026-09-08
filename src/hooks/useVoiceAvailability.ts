@@ -22,7 +22,8 @@ export function useVoiceAvailability(enabled: boolean) {
   const warnedRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!enabled || !speechService.isSupported()) return
+    if (!enabled || !speechService.isSupported() || speechService.getSnapshot().mode !== 'app')
+      return
 
     const language = currentLanguage()
     if (warnedRef.current === language) return

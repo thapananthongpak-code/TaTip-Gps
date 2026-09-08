@@ -19,6 +19,17 @@ export function useShareRoute() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
+  const [, refresh] = useState(0)
+  useEffect(() => {
+    if (!hash.startsWith('#/share/')) return
+    const tick = () => refresh((value) => value + 1)
+    const timer = setInterval(tick, 1000)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [hash])
   const isShareView = hash.startsWith('#/share/')
   const payload: SharePayload | null = isShareView
     ? shareService.parseShareUrl(window.location.href)

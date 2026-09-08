@@ -9,10 +9,9 @@ import { useSpeech } from './useSpeech'
 
 /**
  * ระยะ (เมตร) ที่ต้องเตือนก่อนถึงจุดเลี้ยว
- * เรียงจากไกลไปใกล้ พูดครั้งเดียวต่อหนึ่งจุดเลี้ยว
- * 8 เมตรคือจังหวะ "ทำเดี๋ยวนี้" ซึ่งสำหรับคนเดินคือประมาณ 6-7 ก้าว
+ * เลือกเกณฑ์ที่ใกล้ที่สุดก่อน ไม่ใช้ GPS ยืนยันว่าต้องเลี้ยวทันที
  */
-const ANNOUNCE_AT_METERS = [100, 50, 20, 8] as const
+const ANNOUNCE_AT_METERS = [8, 20, 50, 100] as const
 
 /** สร้างประโยคบอกทางจากขั้นตอนถัดไป */
 function instructionFor(t: TFunction, step: RouteStep, distance: number): string {
@@ -39,7 +38,11 @@ function instructionFor(t: TFunction, step: RouteStep, distance: number): string
  * - เรื่องที่กระทบความปลอดภัย (ออกนอกเส้นทาง / ระบบล่ม / ใกล้ถึงจุดเลี้ยวแล้ว) ใช้ priority critical
  *   เพื่อตัดคิวข้อความที่ไม่เร่งด่วนที่ค้างอยู่
  */
-export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolean) {
+export function useNavigationAnnouncer(
+  nav: UseNavigationResult,
+  enabled: boolean,
+  outputMode = 'reader',
+) {
   const { t } = useTranslation()
   const { speak } = useSpeech()
 
@@ -50,6 +53,12 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
   const prevErrorRef = useRef<string | null>(null)
   const prevOffRouteRef = useRef(false)
   const prevRetryRef = useRef(0)
+
+  // Resuming or changing language must replay the current instruction.
+  useEffect(() => {
+    announcedStepRef.current = -1
+    announcedThresholdsRef.current.clear()
+  }, [enabled, nav.suspended, nav.isRecalculating, nav.isOffRoute, outputMode, t])
 
   // 1) เริ่มคำนวณเส้นทาง
   useEffect(() => {
@@ -62,7 +71,15 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
 
   // 2) ได้เส้นทางใหม่ — สรุปภาพรวมก่อน แล้วค่อยบอกก้าวแรก
   useEffect(() => {
-    if (!enabled || !nav.route || nav.status !== 'navigating') return
+    if (
+      !enabled ||
+      !nav.route ||
+      nav.status !== 'navigating' ||
+      nav.suspended ||
+      nav.isOffRoute ||
+      nav.isRecalculating
+    )
+      return
     if (announcedRouteIdRef.current === nav.route.id) return
 
     announcedRouteIdRef.current = nav.route.id
@@ -76,16 +93,18 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
         destination: nav.route.destination.name,
       }),
     )
-
-    // เส้นทางจากบริการสำรองเป็นเส้นทางรถ ต้องเตือนก่อนที่ผู้ใช้จะก้าวออกไป
-    if (nav.route.usedFallbackProfile) {
-      speak(t('nav.fallbackWarningSpoken'), { priority: 'normal' })
-    }
-  }, [enabled, nav.route, nav.status, speak, t])
+  }, [enabled, nav.route, nav.status, nav.suspended, nav.isOffRoute, nav.isRecalculating, speak, t])
 
   // 3) คำแนะนำแต่ละช่วง + เตือนก่อนถึงจุดเลี้ยว
   useEffect(() => {
-    if (!enabled || nav.status !== 'navigating') return
+    if (
+      !enabled ||
+      nav.status !== 'navigating' ||
+      nav.suspended ||
+      nav.isRecalculating ||
+      nav.isOffRoute
+    )
+      return
     const progress = nav.progress
     if (!progress?.nextStep) return
 
@@ -95,7 +114,7 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
     if (announcedStepRef.current !== currentStepIndex) {
       announcedStepRef.current = currentStepIndex
       announcedThresholdsRef.current.clear()
-      speak(instructionFor(t, nextStep, distanceToNextManeuver))
+      speak(instructionFor(t, nextStep, distanceToNextManeuver), { group: 'navigation' })
       return
     }
 
@@ -115,9 +134,19 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
       threshold <= 8
         ? t('nav.maneuverNow', { maneuver })
         : t('nav.approaching', { distance: speakDistance(distanceToNextManeuver), maneuver }),
-      { priority: threshold <= 20 ? 'critical' : 'normal' },
+      { priority: threshold <= 20 ? 'critical' : 'normal', group: 'navigation' },
     )
-  }, [enabled, nav.progress, nav.status, speak, t])
+  }, [
+    enabled,
+    nav.progress,
+    nav.status,
+    nav.suspended,
+    nav.isRecalculating,
+    nav.isOffRoute,
+    outputMode,
+    speak,
+    t,
+  ])
 
   // 4) ถึงจุดหมาย
   useEffect(() => {

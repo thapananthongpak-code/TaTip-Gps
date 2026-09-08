@@ -9,7 +9,7 @@ import type { AppSettings } from '@/types'
  */
 export interface SettingsService {
   load(): AppSettings
-  save(settings: AppSettings): void
+  save(settings: AppSettings): boolean
   /** ลบข้อมูลทั้งหมดที่แอปเก็บไว้บนเครื่อง (ปุ่ม "ลบข้อมูลของฉัน") */
-  clear(): void
+  clear(): boolean
 }

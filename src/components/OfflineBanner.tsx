@@ -9,10 +9,7 @@ import { useTranslation } from 'react-i18next'
 export function OfflineBanner() {
   const { t } = useTranslation()
   return (
-    <p
-      role="alert"
-      className="bg-amber-100 px-4 py-3 text-base font-bold text-amber-950 dark:bg-amber-200 dark:text-amber-950"
-    >
+    <p className="bg-amber-100 px-4 py-3 text-base font-bold text-amber-950 dark:bg-amber-200 dark:text-amber-950">
       {t('offline.banner')}
     </p>
   )

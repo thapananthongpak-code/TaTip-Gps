@@ -1,11 +1,11 @@
 import { WALKING_SPEED_MPS, mapService } from '@/services'
 import type { LatLng, Route, RouteStep } from '@/types'
-import { distanceToPath } from './geometry'
+import { distanceToPath, remainingPathDistance } from './geometry'
 
 /** ถึงจุดหมายเมื่อเข้าใกล้กว่านี้ (เมตร) */
 export const ARRIVAL_RADIUS_M = 25
-/** ถือว่าผ่านจุดเลี้ยวแล้วเมื่อเข้าใกล้กว่านี้ (เมตร) */
-export const STEP_ADVANCE_M = 18
+/** Minimum displacement beyond a turn before evaluating outgoing-path evidence. */
+export const STEP_ADVANCE_M = 8
 /** ห่างจากเส้นทางเกินนี้ = ออกนอกเส้นทาง (เมตร) */
 export const OFF_ROUTE_M = 40
 
@@ -49,32 +49,45 @@ export function computeProgress(
 ): RouteProgress {
   const steps = route.steps
   const lastIndex = steps.length - 1
+  if (lastIndex < 1) throw new Error('Route has no navigable steps')
 
-  // เลื่อนไปข้างหน้าตราบใดที่เข้าใกล้จุดเลี้ยวถัดไปแล้ว
-  // ใช้ลูปเผื่อ GPS กระโดดข้ามหลายจุดพร้อมกัน (เช่น สัญญาณเพิ่งกลับมาหลังหายไป)
-  let stepIndex = Math.min(Math.max(fromStepIndex, 0), lastIndex)
-  while (
-    stepIndex < lastIndex &&
-    mapService.distanceBetween(position, steps[stepIndex + 1].location) < STEP_ADVANCE_M
-  ) {
+  // Do not skip a turn just because GPS is approaching it. Require evidence on
+  // the outgoing path; at most one turn per update. Closely spaced turns have
+  // an explicit confirmation control when GPS cannot distinguish them.
+  let stepIndex = Math.min(Math.max(fromStepIndex, 0), lastIndex - 1)
+  const upcoming = steps[stepIndex + 1]
+  const turnDistance = mapService.distanceBetween(position, upcoming.location)
+  const incoming = distanceToPath(position, steps[stepIndex].geometry)
+  const outgoing = distanceToPath(position, upcoming.geometry)
+  if (
+    stepIndex + 1 < lastIndex &&
+    turnDistance >= STEP_ADVANCE_M &&
+    turnDistance < 35 &&
+    outgoing < 7 &&
+    incoming > 7 &&
+    outgoing + 5 < incoming
+  )
     stepIndex += 1
-  }
 
   const nextStep = stepIndex < lastIndex ? steps[stepIndex + 1] : steps[lastIndex]
-  const distanceToNextManeuver = mapService.distanceBetween(position, nextStep.location)
+  const directDistance = mapService.distanceBetween(position, nextStep.location)
+  const distanceToNextManeuver = Math.max(
+    directDistance,
+    remainingPathDistance(position, steps[stepIndex].geometry),
+  )
 
   let remainingDistance = distanceToNextManeuver
   for (let i = stepIndex + 1; i <= lastIndex; i++) remainingDistance += steps[i].distance
 
   // ใช้ความเร็วจริงของเส้นทางถ้าคำนวณได้ ไม่งั้นใช้ความเร็วเดินเฉลี่ย
-  const speed = route.duration > 0 ? route.distance / route.duration : WALKING_SPEED_MPS
+  const speed =
+    route.duration > 0 && route.distance > 0 ? route.distance / route.duration : WALKING_SPEED_MPS
 
   const distanceToDestination = mapService.distanceBetween(position, route.destination.location)
 
-  // ถือว่าถึงแล้วเมื่อเข้าใกล้ "พิกัดจุดหมาย" หรือเดินจนสุด "ปลายเส้นทาง" อย่างใดอย่างหนึ่ง
-  // ถ้าเช็กแค่พิกัดจุดหมายอย่างเดียว ผู้ใช้จะเดินจนสุดทางแล้วไม่มีใครบอกว่าถึงแล้ว
-  // เพราะปลายเส้นทางที่ snap เข้าถนนอาจห่างจากพิกัดอาคารหลายสิบเมตร
-  const atRouteEnd = stepIndex === lastIndex && distanceToNextManeuver < ARRIVAL_RADIUS_M
+  // Only the final route segment may produce arrival. Never use proximity to a
+  // building centroid alone; report the remaining endpoint-to-building offset.
+  const atRouteEnd = stepIndex >= lastIndex - 1 && distanceToNextManeuver < 12
 
   return {
     stepIndex,
@@ -83,7 +96,7 @@ export function computeProgress(
     remainingDistance,
     remainingDuration: remainingDistance / speed,
     deviation: distanceToPath(position, route.geometry),
-    hasArrived: distanceToDestination < ARRIVAL_RADIUS_M || atRouteEnd,
+    hasArrived: atRouteEnd,
     distanceToDestination,
   }
 }

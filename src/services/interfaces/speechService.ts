@@ -1,16 +1,28 @@
 import type { ServiceLanguage } from '@/types'
 
 export type SpeechPriority = 'low' | 'normal' | 'critical'
+export type SpeechMode = 'reader' | 'app'
+export interface SpeechSnapshot {
+  mode: SpeechMode
+  text: string
+  sequence: number
+  failed: boolean
+  speaking: boolean
+}
 
 export interface SpeakOptions {
-  /** critical จะตัดคิวพูดทันที (ใช้กับคำเตือนความปลอดภัย) */
+  /** Critical replaces ordinary queued speech, but does not cut another critical warning. */
   priority?: SpeechPriority
   language?: ServiceLanguage
   rate?: number
+  group?: string
 }
 
 /** ครอบ Web Speech API (SpeechSynthesis) — แยกไว้เพื่อ mock ในเทสต์ได้ */
 export interface SpeechService {
+  subscribe(listener: () => void): () => void
+  getSnapshot(): SpeechSnapshot
+  setMode(mode: SpeechMode): void
   isSupported(): boolean
   /**
    * เปิดสิทธิ์ให้พูดได้ ต้องเรียกจาก user gesture หนึ่งครั้งตอนเริ่มใช้แอป

@@ -8,7 +8,7 @@ import { BigButton } from './BigButton'
  * ตั้งใจไม่อัปเดตอัตโนมัติ เพราะการรีโหลดกลางทางจะทำให้การนำทางที่กำลังทำอยู่หลุด
  * ซึ่งอันตรายกับผู้ใช้ที่กำลังเดินอยู่ — ให้ผู้ใช้เลือกจังหวะเอง
  */
-export function UpdatePrompt() {
+export function UpdatePrompt({ busy = false }: { busy?: boolean }) {
   const { t } = useTranslation()
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -19,12 +19,13 @@ export function UpdatePrompt() {
 
   return (
     <section
-      role="alert"
       aria-label={t('update.title')}
       className="flex flex-wrap items-center gap-2 bg-brand-700 px-4 py-3 text-white"
     >
-      <p className="flex-1 text-base font-bold">{t('update.available')}</p>
-      <BigButton variant="secondary" onClick={() => void updateServiceWorker(true)}>
+      <p className="flex-1 text-base font-bold">
+        {t(busy ? 'update.waitUntilStopped' : 'update.available')}
+      </p>
+      <BigButton variant="secondary" disabled={busy} onClick={() => void updateServiceWorker(true)}>
         {t('update.reload')}
       </BigButton>
       <BigButton variant="secondary" onClick={() => setNeedRefresh(false)}>

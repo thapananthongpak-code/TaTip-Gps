@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { routingService } from '@/services'
+import { routingService, speechService } from '@/services'
 import { ServiceError } from '@/types'
 import type { GeoPosition, Place, Route, RouteStep } from '@/types'
 import { OFF_ROUTE_M, computeProgress } from '@/utils/navigation'
@@ -35,6 +35,8 @@ export interface UseNavigationResult {
   start: (place: Place) => void
   stop: () => void
   retry: () => void
+  confirmTurn: () => void
+  suspended: boolean
 }
 
 /** ต้องหลุดติดกันกี่ครั้งถึงจะเชื่อ — กัน GPS แกว่งทำให้คำนวณใหม่มั่ว */
@@ -53,7 +55,7 @@ const MIN_RECALC_INTERVAL_MS = 30_000
  * hook นี้รับผิดชอบ "สถานะและตัวเลข" อย่างเดียว
  * ส่วนการพูดออกเสียงอยู่ที่ useNavigationAnnouncer เพื่อให้แต่ละส่วนเทสต์แยกกันได้
  */
-export function useNavigation(position: GeoPosition | null): UseNavigationResult {
+export function useNavigation(position: GeoPosition | null, usable = true): UseNavigationResult {
   const [status, setStatus] = useState<NavStatus>('idle')
   const [route, setRoute] = useState<Route | null>(null)
   const [destination, setDestination] = useState<Place | null>(null)
@@ -73,6 +75,8 @@ export function useNavigation(position: GeoPosition | null): UseNavigationResult
   const stepIndexRef = useRef(0)
   const offRouteStreakRef = useRef(0)
   const lastRecalcAtRef = useRef(0)
+  const lastProcessedFix = useRef(0)
+  const [manualStep, setManualStep] = useState(0)
 
   const calculate = useCallback(async (origin: GeoPosition, place: Place, isRecalc: boolean) => {
     abortRef.current?.abort()
@@ -80,14 +84,18 @@ export function useNavigation(position: GeoPosition | null): UseNavigationResult
     abortRef.current = controller
 
     setError(null)
+    setProgress(null)
     setRetryAttempt(0)
+    lastRecalcAtRef.current = Date.now()
     if (isRecalc) setIsRecalculating(true)
     else setStatus('calculating')
 
     try {
       const result = await routingService.getWalkingRoute(origin, place, {
         signal: controller.signal,
-        onRetry: (attempt) => setRetryAttempt(attempt),
+        onRetry: (attempt) => {
+          if (!controller.signal.aborted) setRetryAttempt(attempt)
+        },
       })
       if (controller.signal.aborted) return
 
@@ -118,17 +126,18 @@ export function useNavigation(position: GeoPosition | null): UseNavigationResult
       setProgress(null)
       setArrivalOffset(null)
       const origin = positionRef.current
-      if (!origin) {
+      if (!origin || !usable || Date.now() - origin.timestamp > 15000 || origin.accuracy > 30) {
         setError(new ServiceError('NO_POSITION'))
         setStatus('error')
         return
       }
       void calculate(origin, place, false)
     },
-    [calculate],
+    [calculate, usable],
   )
 
   const stop = useCallback(() => {
+    speechService.cancel()
     abortRef.current?.abort()
     abortRef.current = null
     setStatus('idle')
@@ -139,19 +148,22 @@ export function useNavigation(position: GeoPosition | null): UseNavigationResult
     setIsOffRoute(false)
     setIsRecalculating(false)
     setArrivalOffset(null)
+    setRetryAttempt(0)
+    lastProcessedFix.current = 0
     stepIndexRef.current = 0
     offRouteStreakRef.current = 0
   }, [])
 
   const retry = useCallback(() => {
     const origin = positionRef.current
-    if (!origin || !destination) return
+    if (!origin || !destination || !usable) return
     void calculate(origin, destination, false)
-  }, [calculate, destination])
+  }, [calculate, destination, usable])
 
   // ติดตามความคืบหน้าทุกครั้งที่ GPS อัปเดต
   useEffect(() => {
-    if (status !== 'navigating' || !route || !position) return
+    if (status !== 'navigating' || !route || !position || !usable || isRecalculating) return
+    if (Date.now() - position.timestamp > 15000 || position.accuracy > 30) return
 
     const result = computeProgress(route, position, stepIndexRef.current)
     stepIndexRef.current = result.stepIndex
@@ -164,7 +176,7 @@ export function useNavigation(position: GeoPosition | null): UseNavigationResult
       remainingDuration: result.remainingDuration,
     })
 
-    if (result.hasArrived) {
+    if (result.hasArrived && position.accuracy <= 15) {
       setArrivalOffset(result.distanceToDestination)
       setStatus('arrived')
       setProgress(null)
@@ -175,6 +187,8 @@ export function useNavigation(position: GeoPosition | null): UseNavigationResult
     // ไม่งั้นจะกลายเป็นยิงคำนวณเส้นทางใหม่รัวๆ ทั้งที่ผู้ใช้เดินถูกทางอยู่
     if (position.accuracy > OFF_ROUTE_MAX_ACCURACY_M) return
 
+    if (lastProcessedFix.current === position.timestamp) return
+    lastProcessedFix.current = position.timestamp
     if (result.deviation > OFF_ROUTE_M) {
       offRouteStreakRef.current += 1
       if (offRouteStreakRef.current >= OFF_ROUTE_STREAK) {
@@ -188,15 +202,33 @@ export function useNavigation(position: GeoPosition | null): UseNavigationResult
       offRouteStreakRef.current = 0
       setIsOffRoute(false)
     }
-  }, [position, route, status, destination, isRecalculating, calculate])
+  }, [position, route, status, destination, isRecalculating, calculate, usable, manualStep])
 
   useEffect(() => () => abortRef.current?.abort(), [])
 
+  const confirmTurn = useCallback(() => {
+    if (
+      status !== 'navigating' ||
+      !usable ||
+      isOffRoute ||
+      isRecalculating ||
+      !route ||
+      !progress ||
+      progress.distanceToNextManeuver > 25
+    )
+      return
+    stepIndexRef.current = Math.min(stepIndexRef.current + 1, route.steps.length - 2)
+    speechService.cancel()
+    setManualStep((value) => value + 1)
+  }, [status, usable, isOffRoute, isRecalculating, route, progress])
+
   return {
+    suspended: !usable,
+    confirmTurn,
     status,
     route,
     destination,
-    progress,
+    progress: usable && !isRecalculating ? progress : null,
     error,
     isOffRoute,
     isRecalculating,

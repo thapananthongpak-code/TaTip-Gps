@@ -25,9 +25,20 @@ function validate(value: unknown): SharePayload | null {
 
   if (
     typeof position?.lat !== 'number' ||
+    !Number.isFinite(position.lat) ||
+    Math.abs(position.lat) > 90 ||
     typeof position?.lng !== 'number' ||
+    !Number.isFinite(position.lng) ||
+    Math.abs(position.lng) > 180 ||
     typeof data.capturedAt !== 'number' ||
-    typeof data.expiresAt !== 'number'
+    typeof data.expiresAt !== 'number' ||
+    !Number.isFinite(data.expiresAt) ||
+    !Number.isFinite(data.capturedAt) ||
+    data.expiresAt <= data.capturedAt ||
+    data.expiresAt - data.capturedAt > 3600000 + 15000 ||
+    typeof data.accuracy !== 'number' ||
+    !Number.isFinite(data.accuracy) ||
+    data.accuracy < 0
   ) {
     return null
   }
@@ -43,7 +54,11 @@ function validate(value: unknown): SharePayload | null {
     destination:
       typeof destination?.name === 'string' &&
       typeof destLocation?.lat === 'number' &&
-      typeof destLocation?.lng === 'number'
+      typeof destLocation?.lng === 'number' &&
+      Number.isFinite(destLocation.lat) &&
+      Math.abs(destLocation.lat) <= 90 &&
+      Number.isFinite(destLocation.lng) &&
+      Math.abs(destLocation.lng) <= 180
         ? {
             name: destination.name,
             location: { lat: destLocation.lat, lng: destLocation.lng },
@@ -62,13 +77,13 @@ export const webShareService: ShareService = {
   parseShareUrl(url: string): SharePayload | null {
     const marker = '#/share/'
     const index = url.indexOf(marker)
-    if (index === -1) return null
+    if (index === -1 || url.length > 6000) return null
 
     try {
       const payload = validate(decodePayload(url.slice(index + marker.length)))
       if (!payload) return null
       // ลิงก์หมดอายุแล้วถือว่าใช้ไม่ได้ ไม่แสดงตำแหน่งย้อนหลังให้ใคร
-      if (payload.expiresAt < Date.now()) return null
+      if (payload.expiresAt <= Date.now()) return null
       return payload
     } catch {
       return null
@@ -80,9 +95,13 @@ export const webShareService: ShareService = {
   },
 
   openSms(phone: string, message: string): void {
-    // iOS ใช้ &body= ส่วน Android ใช้ ?body= — ใช้ ?body= ซึ่งรองรับกว้างกว่า
-    // ถ้าอุปกรณ์เปิดไม่ได้ ผู้ใช้ยังมีปุ่มคัดลอกข้อความเป็นทางสำรอง
-    window.location.href = `sms:${phone.replace(/[^\d+]/g, '')}?body=${encodeURIComponent(message)}`
+    const number = phone.replace(/[ ()-]/g, '')
+    if (!/^[+]?[0-9]{6,15}$/.test(number)) return
+    const ios =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    window.location.href =
+      'sms:' + number + (ios ? '&' : '?') + 'body=' + encodeURIComponent(message)
   },
 
   async share(content: ShareContent): Promise<ShareOutcome> {

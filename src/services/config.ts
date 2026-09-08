@@ -3,7 +3,7 @@
  * ทุกบริการที่ใช้เป็นของฟรีและไม่ต้องใช้ API key
  * แต่มี rate limit — ดูรายละเอียดใน README ส่วน "ข้อจำกัดของบริการฟรี"
  */
-export const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+export const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 export const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 export const OSM_MAX_ZOOM = 19
@@ -20,13 +20,12 @@ export const NOMINATIM_MIN_INTERVAL_MS = 1100
  * ซึ่งอันตรายสำหรับแอปนำทางคนเดิน เพราะจะพาไปตามถนนรถ ไม่ใช้ทางเท้า และคิดเวลาด้วยความเร็วรถ
  *
  * จึงใช้อินสแตนซ์ของ FOSSGIS ที่ติดตั้ง profile เดินเท้าไว้จริง (ตัวเดียวกับที่เว็บ openstreetmap.org ใช้)
- * และเหลือ demo server ไว้เป็นทางสำรองเท่านั้น พร้อมทำเครื่องหมายว่าเป็นเส้นทางรถ เพื่อเตือนผู้ใช้
+ * หากผู้ให้บริการเดินเท้าล่ม จะหยุดนำทาง ไม่เปลี่ยนไปใช้เส้นทางรถยนต์
  */
 export const OSRM_BASE_URL = 'https://routing.openstreetmap.de/routed-foot'
-export const OSRM_FALLBACK_BASE_URL = 'https://router.project-osrm.org'
 export const OSRM_WALKING_PROFILE = 'foot'
 
-/** ความเร็วเดินเฉลี่ยของคนทั่วไป (เมตร/วินาที) ใช้ประเมินเวลาเมื่อต้องใช้ทางสำรอง */
+/** Approximate ETA only; never used to reinterpret a driving route. */
 export const WALKING_SPEED_MPS = 1.25
 
 /** หน่วงการค้นหาอย่างน้อย 1 วินาที กัน rate limit ของ Nominatim */

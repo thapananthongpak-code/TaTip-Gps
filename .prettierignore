@@ -3,3 +3,6 @@ dev-dist
 node_modules
 package-lock.json
 *.md
+test-results
+playwright-report
+coverage

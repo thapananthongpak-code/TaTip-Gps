@@ -43,9 +43,17 @@ export function currentLanguage(): ServiceLanguage {
 
 // ให้เสียงพูดเปลี่ยนตามภาษาที่เลือกโดยอัตโนมัติ
 // ผูกไว้ที่นี่จุดเดียว จะได้ไม่ต้องจำว่าต้องเรียก setLanguage ทุกที่ที่สลับภาษา
-speechService.setLanguage(currentLanguage())
-i18n.on('languageChanged', () => {
+function syncLanguage() {
   speechService.setLanguage(currentLanguage())
-})
+  document.documentElement.lang = currentLanguage()
+  document.title = i18n.t('app.title')
+}
+syncLanguage()
+i18n.on('languageChanged', syncLanguage)
+try {
+  speechService.setMode(localStorage.getItem('taathip.voice') === 'app' ? 'app' : 'reader')
+} catch {
+  /* Default to screen-reader announcements. */
+}
 
 export default i18n

@@ -26,3 +26,6 @@ dev-dist
 
 # Vercel
 .vercel
+test-results/
+playwright-report/
+coverage/

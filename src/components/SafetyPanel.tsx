@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { UseSettingsResult } from '@/hooks/useSettings'
 import type { EmergencyContact } from '@/types'
 import { isVibrationSupported } from '@/utils/vibration'
 import { useSpeech } from '@/hooks/useSpeech'
 import { BigButton } from './BigButton'
-import { SosButton } from './SosButton'
-
-/** เวลาที่การยืนยันลบข้อมูลยังมีผล ก่อนจะยกเลิกเอง */
-const CONFIRM_WINDOW_MS = 5000
 
 /**
  * ปุ่มลบข้อมูลแบบต้องแตะสองครั้ง
@@ -17,30 +13,19 @@ const CONFIRM_WINDOW_MS = 5000
  * ปุ่มที่ลบทันทีอาจทำให้เบอร์ผู้ติดต่อฉุกเฉินหายไปโดยไม่รู้ตัว
  * และจะรู้อีกทีตอนที่ต้องใช้จริง
  */
-function ClearDataButton({ onConfirm }: { onConfirm: () => void }) {
+function ClearDataButton({ onConfirm }: { onConfirm: () => boolean }) {
   const { t } = useTranslation()
   const { speak } = useSpeech()
   const [awaitingConfirm, setAwaitingConfirm] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    },
-    [],
-  )
 
   const handleClick = useCallback(() => {
     if (awaitingConfirm) {
-      if (timerRef.current) clearTimeout(timerRef.current)
       setAwaitingConfirm(false)
-      onConfirm()
-      speak(t('settings.clearDataDoneSpoken'), { priority: 'critical' })
+      if (onConfirm()) speak(t('settings.clearDataDoneSpoken'), { priority: 'critical' })
       return
     }
     setAwaitingConfirm(true)
     speak(t('settings.clearDataConfirmSpoken'), { priority: 'critical' })
-    timerRef.current = setTimeout(() => setAwaitingConfirm(false), CONFIRM_WINDOW_MS)
   }, [awaitingConfirm, onConfirm, speak, t])
 
   return (
@@ -48,6 +33,11 @@ function ClearDataButton({ onConfirm }: { onConfirm: () => void }) {
       <BigButton variant={awaitingConfirm ? 'danger' : 'secondary'} onClick={handleClick}>
         {awaitingConfirm ? t('settings.clearDataConfirm') : t('settings.clearData')}
       </BigButton>
+      {awaitingConfirm && (
+        <BigButton variant="secondary" onClick={() => setAwaitingConfirm(false)}>
+          {t('settings.cancelClear')}
+        </BigButton>
+      )}
       <p className="-mt-1 text-sm text-slate-600 dark:text-slate-300">
         {t('settings.clearDataNote')}
       </p>
@@ -74,7 +64,7 @@ function ContactForm({ onAdd }: { onAdd: (name: string, phone: string) => void }
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
 
-  const canSubmit = name.trim().length > 0 && phone.trim().length >= 6
+  const canSubmit = name.trim().length > 0 && /^[+]?[0-9]{6,15}$/.test(phone.replace(/[ ()-]/g, ''))
 
   return (
     <form
@@ -94,7 +84,8 @@ function ContactForm({ onAdd }: { onAdd: (name: string, phone: string) => void }
         id="contact-name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        autoComplete="name"
+        autoComplete="off"
+        maxLength={80}
         className="min-h-touch rounded-xl border-2 border-slate-500 px-4 py-2 text-lg dark:border-slate-400 dark:bg-slate-800"
       />
 
@@ -107,7 +98,8 @@ function ContactForm({ onAdd }: { onAdd: (name: string, phone: string) => void }
         onChange={(e) => setPhone(e.target.value)}
         type="tel"
         inputMode="tel"
-        autoComplete="tel"
+        autoComplete="off"
+        maxLength={24}
         className="min-h-touch rounded-xl border-2 border-slate-500 px-4 py-2 text-lg dark:border-slate-400 dark:bg-slate-800"
       />
 
@@ -164,26 +156,16 @@ export function SafetyPanel({ settings, onSos, hasPosition, share }: Props) {
       className="border-t-2 border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
     >
       <h2 className="text-lg font-bold">{t('settings.safetyTitle')}</h2>
+      {settings.storageFailed && <p className="failure-notice">{t('settings.storageFailed')}</p>}
 
-      <div className="mt-3">
-        <SosButton
-          onTrigger={() => onSos(contacts[0]?.phone)}
-          disabled={!hasPosition}
-          vibrationEnabled={values.vibrationEnabled}
-        />
-        <p id="sos-hint" className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          {contacts.length > 0
-            ? t('sos.hintWithContact', { name: contacts[0].name })
-            : t('sos.hintNoContact')}
-        </p>
-      </div>
+      <p className="mt-3">{t('sos.confirmHint')}</p>
 
       {/* แชร์ตำแหน่ง */}
       <div className="mt-4">
         <h3 className="text-base font-bold">{t('share.title')}</h3>
         {share.isSharing ? (
           <>
-            <p aria-live="polite" className="mt-1 text-base">
+            <p className="mt-1 text-base">
               {t('share.activeUntil', {
                 time: share.expiresAt ? new Date(share.expiresAt).toLocaleTimeString() : '',
               })}

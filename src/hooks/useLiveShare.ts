@@ -34,6 +34,14 @@ export function useLiveShare({ position, destination, hasArrived }: Options) {
   const [session, setSession] = useState<ShareSession | null>(null)
   const arrivalAnnouncedRef = useRef(false)
   const positionRef = useRef(position)
+  const generation = useRef(0)
+
+  useEffect(() => {
+    generation.current += 1
+    return () => {
+      generation.current += 1
+    }
+  }, [hasArrived])
 
   useEffect(() => {
     positionRef.current = position
@@ -42,7 +50,7 @@ export function useLiveShare({ position, destination, hasArrived }: Options) {
   const buildUrl = useCallback(
     (expiresAt: number) => {
       const current = positionRef.current
-      if (!current) return null
+      if (!current || Date.now() - current.timestamp > 15000 || current.accuracy > 30) return null
       return shareService.buildShareUrl({
         position: { lat: current.lat, lng: current.lng },
         accuracy: current.accuracy,
@@ -58,7 +66,7 @@ export function useLiveShare({ position, destination, hasArrived }: Options) {
 
   /** เริ่มเซสชันแชร์ และส่งตำแหน่งครั้งแรกทันที */
   const start = useCallback(async () => {
-    if (!positionRef.current) {
+    if (!positionRef.current || hasArrived) {
       speak(t('share.noPositionSpoken'), { priority: 'critical' })
       return
     }
@@ -68,37 +76,50 @@ export function useLiveShare({ position, destination, hasArrived }: Options) {
     if (!url) return
 
     arrivalAnnouncedRef.current = false
-    setSession({
-      startedAt: Date.now(),
-      expiresAt,
-      destinationName: destination?.name,
-    })
-
+    const request = ++generation.current
     const outcome = await shareService.share({
       title: t('share.title'),
       text: t('share.messageTemplate', { expires: new Date(expiresAt).toLocaleTimeString() }),
       url,
     })
-    speak(outcome === 'copied' ? t('share.copiedSpoken') : t('share.startedSpoken'))
-  }, [buildUrl, destination?.name, speak, t])
+    if (request !== generation.current || Date.now() >= expiresAt) return
+    if (outcome !== 'unavailable')
+      setSession({ startedAt: Date.now(), expiresAt, destinationName: destination?.name })
+    speak(
+      outcome === 'unavailable'
+        ? t('share.notSent')
+        : outcome === 'copied'
+          ? t('share.copiedSpoken')
+          : t('share.startedSpoken'),
+    )
+  }, [buildUrl, destination?.name, hasArrived, speak, t])
 
   /** ส่งตำแหน่งล่าสุดอีกครั้ง — จำเป็นเพราะลิงก์เป็นภาพนิ่ง ไม่อัปเดตเอง */
   const sendUpdate = useCallback(async () => {
-    if (!session) return
+    if (!session || hasArrived || session.expiresAt <= Date.now()) return
     const url = buildUrl(session.expiresAt)
     if (!url) {
       speak(t('share.noPositionSpoken'), { priority: 'critical' })
       return
     }
+    const request = generation.current
     const outcome = await shareService.share({
       title: t('share.title'),
       text: t('share.updateMessage'),
       url,
     })
-    speak(outcome === 'copied' ? t('share.copiedSpoken') : t('share.updateSentSpoken'))
-  }, [buildUrl, session, speak, t])
+    if (request !== generation.current || session.expiresAt <= Date.now()) return
+    speak(
+      outcome === 'unavailable'
+        ? t('share.notSent')
+        : outcome === 'copied'
+          ? t('share.copiedSpoken')
+          : t('share.updateSentSpoken'),
+    )
+  }, [buildUrl, session, hasArrived, speak, t])
 
   const stop = useCallback(() => {
+    generation.current += 1
     setSession(null)
     speak(t('share.stoppedSpoken'))
   }, [speak, t])
@@ -112,9 +133,13 @@ export function useLiveShare({ position, destination, hasArrived }: Options) {
 
   // ประกาศให้รู้ว่าปิดการแชร์อัตโนมัติแล้ว (พูดอย่างเดียว ไม่แตะ state)
   useEffect(() => {
-    if (!hasArrived || session === null || arrivalAnnouncedRef.current) return
-    arrivalAnnouncedRef.current = true
-    speak(t('share.autoStoppedSpoken'), { priority: 'critical' })
+    if (!hasArrived || session === null) return
+    if (!arrivalAnnouncedRef.current) {
+      arrivalAnnouncedRef.current = true
+      speak(t('share.autoStoppedSpoken'))
+    }
+    const timer = setTimeout(() => setSession(null), 0)
+    return () => clearTimeout(timer)
   }, [hasArrived, session, speak, t])
 
   // ลิงก์หมดอายุแล้วก็ปิดเซสชันตาม เพื่อไม่ให้ UI บอกว่ายังแชร์อยู่ทั้งที่ลิงก์ใช้ไม่ได้แล้ว

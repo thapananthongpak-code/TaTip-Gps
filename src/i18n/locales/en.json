@@ -12,7 +12,7 @@
   },
   "permission": {
     "title": "This app needs your location",
-    "body": "Taa-Thip Navigator needs GPS to tell you where you are and to guide you by voice. Your location stays on this device and is never sent to any server.",
+    "body": "GPS provides your location for directions. Searches and route requests send data to external map providers. This app does not record route history. Choose a voice mode and test it before starting.",
     "startButton": "Start and allow location access",
     "startButtonHint": "Tap to allow location access and enable spoken guidance",
     "spoken": "Welcome to Taa-Thip Navigator. This app needs G P S to guide you by voice. Tap the button in the middle of the screen to allow it."
@@ -61,21 +61,22 @@
     "resultsSpoken_other": "Found {{count}} places. Tap one to choose your destination.",
     "resultsLabel": "Search results",
     "clear": "Clear search",
-    "hint": "Type at least 2 characters and the search runs automatically"
+    "hint": "Enter at least 2 characters, then press Search.",
+    "submit": "Search"
   },
   "nav": {
     "calculating": "Calculating your route",
     "calculatingSpoken": "Calculating a walking route. Please wait a moment.",
     "routeReadySpoken": "Route to {{destination}} found. Distance {{distance}}, about {{minutes}} minutes on foot.",
     "fallbackWarningSpoken": "Warning. This route was calculated for cars because the walking route service is temporarily unavailable. There may be no sidewalk along parts of it. Please walk with extra care.",
-    "stepInstruction": "Go straight for {{distance}}, then {{maneuver}}",
-    "stepInstructionWithStreet": "Go straight for {{distance}}, then {{maneuver}} onto {{street}}",
+    "stepInstruction": "Follow the route for about {{distance}}, then {{maneuver}}",
+    "stepInstructionWithStreet": "Follow the route for about {{distance}}, then {{maneuver}} near {{street}}",
     "approaching": "In {{distance}}, {{maneuver}}",
-    "maneuverNow": "{{maneuver}} now",
-    "arrivedSpoken": "You have arrived at {{destination}}",
+    "maneuverNow": "Near the point to {{maneuver}}. Check your surroundings first.",
+    "arrivedSpoken": "Near the end of the route to {{destination}}. Check the actual entrance.",
     "arrivedNearSpoken": "You have reached the end of the route. {{destination}} is about {{distance}} away. The walking route only goes this far. Please ask someone nearby for help to stay safe.",
-    "arrived": "You have arrived",
-    "offRouteSpoken": "You are off the route. Calculating a new route.",
+    "arrived": "Near the route endpoint",
+    "offRouteSpoken": "Your position is off the route. Stop somewhere safe while a new route is checked.",
     "recalculating": "Calculating a new route",
     "remainingLabel": "Remaining",
     "etaLabel": "Estimated time",
@@ -83,9 +84,13 @@
     "minutes_other": "{{count}} minutes",
     "nextStepLabel": "Next step",
     "stopButton": "Stop navigation",
-    "stoppedSpoken": "Navigation stopped",
+    "stoppedSpoken": "Navigation stopped. You can choose a new destination.",
     "repeatInstruction": "Repeat instruction",
-    "navigatingTo": "Navigating to {{destination}}"
+    "navigatingTo": "Navigating to {{destination}}",
+    "paused": "Walking guidance paused: location or audio is not ready. Stop somewhere safe. Check GPS and test audio before continuing.",
+    "resumed": "Guidance is available again. Check your surroundings before continuing.",
+    "confirmTurn": "Confirm I have passed this turn",
+    "safetyNote": "Use with a cane or guide dog. This app cannot detect vehicles, obstacles or crossing signals, or tell you it is safe to cross. Keep the app visible during use."
   },
   "whereAmI": {
     "button": "Where am I?",
@@ -102,7 +107,9 @@
     "followingOn": "The map is following your location",
     "followingOff": "The map has stopped following your location",
     "zoomIn": "Zoom in",
-    "zoomOut": "Zoom out"
+    "zoomOut": "Zoom out",
+    "show": "Show supporting map",
+    "hide": "Hide map"
   },
   "actions": {
     "repeatStatus": "Repeat current status",
@@ -126,32 +133,32 @@
     "INSECURE_CONTEXT": "Location requires an HTTPS connection",
     "INSECURE_CONTEXT_SPOKEN": "This app needs a secure H T T P S connection to use your location. Please open it from a link starting with H T T P S.",
     "NETWORK": "No internet connection",
-    "NETWORK_SPOKEN": "No internet connection. Navigation has stopped for now. Please stop somewhere safe and check your connection.",
-    "RATE_LIMITED": "Too many search requests",
-    "RATE_LIMITED_SPOKEN": "The search service is temporarily rate limited. Please wait a moment and try again.",
+    "NETWORK_SPOKEN": "Cannot reach the map service. If navigating, stop somewhere safe and check your connection.",
+    "RATE_LIMITED": "Map requests are temporarily limited",
+    "RATE_LIMITED_SPOKEN": "The map service is temporarily rate limited. If navigating, stop somewhere safe. Wait and try again.",
     "NOT_FOUND": "No walking route to this destination",
     "NOT_FOUND_SPOKEN": "No walking route to this destination was found. Please choose a closer destination.",
     "PROVIDER_ERROR": "The map service is unavailable",
-    "PROVIDER_ERROR_SPOKEN": "The routing service is temporarily unavailable. Navigation has stopped. Please stop somewhere safe.",
+    "PROVIDER_ERROR_SPOKEN": "The map service is temporarily unavailable. If navigating, stop somewhere safe and retry.",
     "ABORTED": "Request cancelled",
     "ABORTED_SPOKEN": "Request cancelled",
     "NO_POSITION": "Your location is not known yet",
     "NO_POSITION_SPOKEN": "Your location is not known yet, so a route cannot be calculated. Please wait until the app finds your location, then try again.",
     "UNKNOWN": "An unknown error occurred",
-    "UNKNOWN_SPOKEN": "An unknown error occurred. Navigation has stopped. Please stop somewhere safe.",
+    "UNKNOWN_SPOKEN": "An unexpected problem occurred. If navigating, stop somewhere safe and retry.",
     "retryingSpoken": "Connection problem. Trying again.",
     "routeFailedSpoken": "The route could not be calculated after several attempts. Navigation has stopped. Please stop somewhere safe and try again.",
     "retryButton": "Try again",
-    "speechUnsupported": "This browser does not support speech. The app will show text on screen instead."
+    "speechUnsupported": "App speech is unavailable in this browser. Use an enabled screen reader and test its announcements before starting."
   },
   "hazard": {
-    "crossroadsSpoken": "Caution. A crossroads is ahead with traffic from several directions. Please stop and listen before crossing.",
-    "majorRoadSpoken": "Caution. A main road is ahead, {{street}}. Please stop and listen before crossing.",
+    "crossroadsSpoken": "Caution. A junction may be ahead. The map cannot check traffic or crossing signals. Do not cross based only on this app.",
+    "majorRoadSpoken": "Caution near {{street}}. Traffic may be present. The map cannot confirm a safe crossing.",
     "disclaimer": "Hazard warnings come from open map data, which does not say whether a pedestrian crossing or traffic signal actually exists. Always rely on your own judgement."
   },
   "sos": {
     "button": "Emergency help",
-    "buttonLabel": "Emergency help button. Press and hold for three seconds to send your location.",
+    "buttonLabel": "Request help. Activate to prepare a message, or hold for three seconds. Nothing is sent automatically.",
     "holding": "Keep holding...",
     "holdingSpoken": "Keep holding for three seconds to send for help. Lift your finger to cancel.",
     "cancelledSpoken": "Emergency request cancelled. Nothing was sent.",
@@ -162,23 +169,31 @@
     "hintWithContact": "Hold for 3 seconds to send your location to {{name}}",
     "hintNoContact": "Hold for 3 seconds to share your location. Adding an emergency contact in advance is recommended.",
     "shareTitle": "Emergency help request",
-    "messageTemplate": "I need help. My location is {{latitude}}, {{longitude}} (accurate to about {{accuracy}} meters) at {{time}}. Map: {{url}}"
+    "messageTemplate": "I need help. My location is {{latitude}}, {{longitude}} (accurate to about {{accuracy}} meters) at {{time}}. Map: {{url}}",
+    "confirmHint": "Check the message and choose a recipient. Your messaging app opens for you to press Send. Nothing is sent automatically.",
+    "withoutLocation": "I need urgent help. My device cannot find my location. Please contact me.",
+    "preview": "Help request message",
+    "shareAction": "Choose an app to send this message",
+    "close": "Close and return",
+    "stale": "These are last-known coordinates, not a current location. Tell your recipient.",
+    "handedOff": "Handed to the sharing app. Delivery to the recipient cannot be confirmed."
   },
   "share": {
-    "title": "Share location with someone you trust",
+    "title": "Send this location",
     "start": "Start sharing location",
     "stop": "Stop sharing",
     "sendUpdate": "Send latest location",
     "activeUntil": "Sharing is on. The link expires at {{time}}",
-    "snapshotNotice": "This link shows your location at the moment you sent it. It does not update on its own. Please tap \"Send latest location\" from time to time.",
+    "snapshotNotice": "Snapshot only. Sent links cannot be recalled. Recipients can copy the coordinates, even beyond the displayed expiry.",
     "messageTemplate": "I am on my way. Here is my location. This link expires at {{expires}}",
     "updateMessage": "Here is my latest location",
-    "startedSpoken": "Location sharing started. The link shows your location at the time it was sent and does not update automatically.",
+    "startedSpoken": "Sharing this location snapshot. It does not update automatically.",
     "updateSentSpoken": "Latest location sent",
     "copiedSpoken": "The location link has been copied. Please paste it into the app you want to send it from.",
-    "stoppedSpoken": "Location sharing stopped",
-    "autoStoppedSpoken": "You have arrived. Location sharing has been stopped automatically.",
-    "noPositionSpoken": "Your location is not known yet, so it cannot be shared."
+    "stoppedSpoken": "Sharing session closed. Previously sent links still open until the displayed time.",
+    "autoStoppedSpoken": "At the route endpoint. Sharing session closed. Previously sent links cannot be recalled.",
+    "noPositionSpoken": "Your location is not known yet, so it cannot be shared.",
+    "notSent": "Nothing shared. Sharing was cancelled or is unavailable."
   },
   "sharedView": {
     "title": "Shared location",
@@ -204,25 +219,28 @@
     "hazardAlerts": "Spoken hazard warnings",
     "vibration": "Vibrate along with speech",
     "vibrationUnsupported": "This device does not support vibration (for example iPhone on Safari). Speech will be used on its own.",
-    "clearData": "Delete saved contacts and settings",
+    "clearData": "Delete saved settings",
     "openSettings": "Safety settings",
     "closeSettings": "Close settings",
-    "clearDataConfirm": "Tap again to confirm deletion",
-    "clearDataConfirmSpoken": "Confirm deleting all emergency contacts and settings. Tap the same button again within five seconds to confirm, or wait to cancel.",
-    "clearDataDoneSpoken": "Contacts and settings have been deleted. Your language choice is kept.",
-    "clearDataNote": "Your language choice is kept, and the app never stored any location history anyway."
+    "clearDataConfirm": "Confirm deletion",
+    "clearDataConfirmSpoken": "Delete saved contacts and display settings? Choose Confirm deletion or Cancel. There is no time limit.",
+    "clearDataDoneSpoken": "Saved contacts and display settings deleted.",
+    "clearDataNote": "Deletes emergency contacts and display settings. Language, voice preference and browser caches are not removed.",
+    "cancelClear": "Cancel deletion",
+    "storageFailed": "Changes could not be saved or deleted on this device. Do not rely on emergency contacts remaining after closing the app."
   },
   "offline": {
-    "banner": "No internet — the map you already loaded still works, but searching and new routes do not",
-    "lostSpoken": "Internet connection lost. The map you already loaded still works, but searching for places and calculating new routes will not work until you are back online.",
-    "restoredSpoken": "Internet connection restored. All features are available again.",
+    "banner": "Offline: search and new routes are unavailable. Check your route and surroundings.",
+    "lostSpoken": "Offline. Search and new routes are unavailable. Stop somewhere safe if you leave the route.",
+    "restoredSpoken": "Your device is connected to a network. Retry any failed requests.",
     "searchUnavailable": "Search is unavailable while offline"
   },
   "update": {
     "title": "New version available",
     "available": "A new version of the app is ready",
     "reload": "Update now",
-    "later": "Later"
+    "later": "Later",
+    "waitUntilStopped": "Update available. Stop navigation before updating."
   },
   "appearance": {
     "title": "Display",
@@ -244,5 +262,18 @@
   "a11y": {
     "skipToMain": "Skip to main controls",
     "mainLabel": "Main controls"
+  },
+  "voice": {
+    "title": "Spoken guidance",
+    "reader": "Screen reader",
+    "app": "App voice",
+    "readerHint": "Guidance is announced by your screen reader. Choose this mode when VoiceOver or TalkBack is enabled to avoid two voices.",
+    "appHint": "Use this mode without a screen reader. Test your audio and volume before travelling.",
+    "test": "Test voice / retry",
+    "stop": "Stop current announcement",
+    "testMessage": "Taa-Thip audio test. Check that you can hear this clearly before travelling.",
+    "failed": "App speech failed to start or stopped unexpectedly. Stop somewhere safe. Check the installed voice language and volume, or use your screen reader. Test speech again before continuing.",
+    "last": "Latest message",
+    "ready": "Ready to test"
   }
 }

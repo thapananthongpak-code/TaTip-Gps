@@ -21,6 +21,7 @@ export function LanguageToggle() {
 
   const handleToggle = useCallback(async () => {
     speechService.cancel()
+    speechService.unlock()
     await i18n.changeLanguage(nextLanguage)
     // อ่านคีย์เดิมใหม่หลังเปลี่ยนภาษาแล้ว จึงได้ประโยคยืนยันเป็นภาษาใหม่
     speak(i18n.t('language.switchedSpoken'), { priority: 'critical', language: nextLanguage })
@@ -31,10 +32,9 @@ export function LanguageToggle() {
       type="button"
       onClick={handleToggle}
       aria-label={t('language.switchTo')}
-      lang={nextLanguage}
       className="min-h-touch min-w-touch cursor-pointer rounded-xl border-2 border-white/70 px-4 py-2 text-lg font-bold text-white"
     >
-      {t('language.switchToShort')}
+      <span lang={nextLanguage}>{t('language.switchToShort')}</span>
     </button>
   )
 }

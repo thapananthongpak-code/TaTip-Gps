@@ -11,7 +11,7 @@ interface Props {
 
 /**
  * แผงสถานะ GPS — เป็น "แหล่งข้อมูลหลัก" ของแอปสำหรับผู้ใช้ที่มองไม่เห็น
- * ทุกอย่างที่แผนที่สื่อด้วยภาพ ต้องมีข้อความเทียบเท่าอยู่ในนี้ และประกาศผ่าน aria-live
+ * ตัวเลขอัปเดตบนหน้าจอ ส่วนการประกาศใช้ช่องเสียงกลาง ไม่อ่านซ้ำทุก GPS tick
  */
 export function GpsStatusPanel({ geo, onRepeatStatus }: Props) {
   const { t } = useTranslation()
@@ -31,7 +31,7 @@ export function GpsStatusPanel({ geo, onRepeatStatus }: Props) {
         aria-label={t('gps.tracking')}
         className="border-t-4 border-danger-500 bg-danger-500/10 p-4"
       >
-        <p role="alert" className="text-lg font-bold text-danger-600 dark:text-red-300">
+        <p className="text-lg font-bold text-danger-600 dark:text-red-300">
           {t(`errors.${error.code}`)}
         </p>
         <BigButton variant="danger" onClick={geo.retry} className="mt-3 w-full">
@@ -41,7 +41,7 @@ export function GpsStatusPanel({ geo, onRepeatStatus }: Props) {
     )
   }
 
-  const degraded = isPoorAccuracy || isStale
+  const degraded = isPoorAccuracy || isStale || (position?.accuracy ?? 0) > 30
 
   return (
     <section
@@ -49,7 +49,7 @@ export function GpsStatusPanel({ geo, onRepeatStatus }: Props) {
       className="border-t-2 border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
     >
       {/* ประกาศสถานะให้ screen reader ทราบทุกครั้งที่เปลี่ยน โดยไม่ขัดจังหวะสิ่งที่กำลังอ่านอยู่ */}
-      <p aria-live="polite" className="text-lg font-bold">
+      <p className="text-lg font-bold">
         {status === 'acquiring' && t('gps.acquiring')}
         {status === 'tracking' && !isStale && t('gps.tracking')}
         {status === 'tracking' && isStale && t('gps.staleLabel')}

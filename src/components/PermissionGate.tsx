@@ -30,7 +30,7 @@ export function PermissionGate({ onStart, speechSupported }: Props) {
       </p>
 
       {!speechSupported && (
-        <p role="alert" className="max-w-md rounded-xl bg-amber-100 p-4 text-base text-amber-950">
+        <p className="max-w-md rounded-xl bg-amber-100 p-4 text-base text-amber-950">
           {t('errors.speechUnsupported')}
         </p>
       )}

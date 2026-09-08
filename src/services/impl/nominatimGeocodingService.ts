@@ -1,5 +1,6 @@
 import { NOMINATIM_BASE_URL, NOMINATIM_MIN_INTERVAL_MS } from '@/services/config'
 import type { GeocodingService, SearchOptions } from '@/services/interfaces'
+import { ServiceError } from '@/types'
 import type { LatLng, Place } from '@/types'
 import { createTtlCache } from '@/utils/cache'
 import { fetchJson } from './httpClient'
@@ -28,7 +29,17 @@ const schedule = createRateLimiter(NOMINATIM_MIN_INTERVAL_MS)
 const coordKey = (p: LatLng) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`
 
 function toPlace(raw: NominatimPlace): Place {
-  const shortName = raw.name?.trim() || raw.display_name.split(',')[0].trim()
+  if (
+    !raw ||
+    typeof raw.display_name !== 'string' ||
+    !Number.isFinite(Number(raw.lat)) ||
+    !Number.isFinite(Number(raw.lon)) ||
+    Math.abs(Number(raw.lat)) > 90 ||
+    Math.abs(Number(raw.lon)) > 180
+  )
+    throw new ServiceError('PROVIDER_ERROR')
+  const shortName =
+    (typeof raw.name === 'string' && raw.name.trim()) || raw.display_name.split(',')[0].trim()
   return {
     id: String(raw.place_id),
     name: shortName,
@@ -78,9 +89,11 @@ export const nominatimGeocodingService: GeocodingService = {
       params.set('bounded', '0')
     }
 
-    const raw = await schedule(() =>
-      fetchJson<NominatimPlace[]>(`${NOMINATIM_BASE_URL}/search?${params}`, { signal }),
-    )
+    const raw = await fetchJson<NominatimPlace[]>(`${NOMINATIM_BASE_URL}/search?${params}`, {
+      signal,
+      schedule,
+    })
+    if (!Array.isArray(raw)) throw new ServiceError('PROVIDER_ERROR')
 
     const places = raw.map(toPlace)
     searchCache.set(cacheKey, places)
@@ -103,12 +116,15 @@ export const nominatimGeocodingService: GeocodingService = {
       'accept-language': language,
     })
 
-    const raw = await schedule(() =>
-      fetchJson<NominatimPlace | { error: string }>(`${NOMINATIM_BASE_URL}/reverse?${params}`, {
+    const raw = await fetchJson<NominatimPlace | { error: string }>(
+      `${NOMINATIM_BASE_URL}/reverse?${params}`,
+      {
         signal,
-      }),
+        schedule,
+      },
     )
 
+    if (!raw || typeof raw !== 'object') throw new ServiceError('PROVIDER_ERROR')
     const place = 'error' in raw ? null : toPlace(raw)
     reverseCache.set(cacheKey, place)
     return place

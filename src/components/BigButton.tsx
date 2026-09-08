@@ -23,7 +23,7 @@ export function BigButton({ variant = 'primary', className = '', children, ...re
   return (
     <button
       type="button"
-      className={`min-h-touch min-w-touch cursor-pointer rounded-2xl px-5 py-3 text-lg font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${VARIANTS[variant]} ${className}`}
+      className={`min-h-touch min-w-touch cursor-pointer rounded-2xl px-5 py-3 text-lg font-bold disabled:cursor-not-allowed disabled:opacity-60 ${VARIANTS[variant]} ${className}`}
       {...rest}
     >
       {children}

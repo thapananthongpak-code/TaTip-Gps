@@ -1,9 +1,12 @@
 import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useSpeech } from './useSpeech'
 import { settingsService } from '@/services'
 import type { AppSettings, EmergencyContact, FontScale, ThemePreference } from '@/types'
 
 export interface UseSettingsResult {
   settings: AppSettings
+  storageFailed: boolean
   setFontScale: (scale: FontScale) => void
   setTheme: (theme: ThemePreference) => void
   setVibrationEnabled: (enabled: boolean) => void
@@ -11,7 +14,7 @@ export interface UseSettingsResult {
   addContact: (name: string, phone: string) => void
   removeContact: (id: string) => void
   /** ลบข้อมูลทั้งหมดที่แอปเก็บไว้บนเครื่อง */
-  clearAll: () => void
+  clearAll: () => boolean
 }
 
 /**
@@ -19,12 +22,20 @@ export interface UseSettingsResult {
  * อ่านค่าเริ่มต้นแบบ lazy เพื่อไม่ให้แตะ localStorage ทุกครั้งที่ re-render
  */
 export function useSettings(): UseSettingsResult {
+  const { t } = useTranslation()
+  const { speak } = useSpeech()
   const [settings, setSettings] = useState<AppSettings>(() => settingsService.load())
+  const [storageFailed, setStorageFailed] = useState(false)
 
-  const update = useCallback((next: AppSettings) => {
-    setSettings(next)
-    settingsService.save(next)
-  }, [])
+  const update = useCallback(
+    (next: AppSettings) => {
+      setSettings(next)
+      const saved = settingsService.save(next)
+      setStorageFailed(!saved)
+      if (!saved) speak(t('settings.storageFailed'), { priority: 'critical' })
+    },
+    [speak, t],
+  )
 
   const setFontScale = useCallback(
     (fontScale: FontScale) => update({ ...settings, fontScale }),
@@ -48,6 +59,12 @@ export function useSettings(): UseSettingsResult {
 
   const addContact = useCallback(
     (name: string, phone: string) => {
+      if (
+        !name.trim() ||
+        name.length > 80 ||
+        !/^[+]?[0-9]{6,15}$/.test(phone.replace(/[ ()-]/g, ''))
+      )
+        return
       const contact: EmergencyContact = {
         id: crypto.randomUUID(),
         name: name.trim(),
@@ -68,12 +85,19 @@ export function useSettings(): UseSettingsResult {
   )
 
   const clearAll = useCallback(() => {
-    settingsService.clear()
+    const cleared = settingsService.clear()
+    setStorageFailed(!cleared)
+    if (!cleared) {
+      speak(t('settings.storageFailed'), { priority: 'critical' })
+      return false
+    }
     setSettings(settingsService.load())
-  }, [])
+    return true
+  }, [speak, t])
 
   return {
     settings,
+    storageFailed,
     setFontScale,
     setTheme,
     setVibrationEnabled,

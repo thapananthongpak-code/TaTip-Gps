@@ -1,9 +1,4 @@
-import {
-  OSRM_BASE_URL,
-  OSRM_FALLBACK_BASE_URL,
-  OSRM_WALKING_PROFILE,
-  WALKING_SPEED_MPS,
-} from '@/services/config'
+import { OSRM_BASE_URL, OSRM_WALKING_PROFILE } from '@/services/config'
 import type { RouteOptions, RoutingService } from '@/services/interfaces'
 import { ServiceError } from '@/types'
 import type { HazardKind, LatLng, ManeuverType, Place, Route, RouteStep } from '@/types'
@@ -47,6 +42,22 @@ interface OsrmResponse {
 
 /** GeoJSON เก็บพิกัดเป็น [lng, lat] สลับกับที่แอปใช้ */
 const toLatLng = ([lng, lat]: [number, number]): LatLng => ({ lat, lng })
+
+function validCoordinate(value: unknown): value is [number, number] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 2 &&
+    typeof value[0] === 'number' &&
+    Number.isFinite(value[0]) &&
+    Math.abs(value[0]) <= 180 &&
+    typeof value[1] === 'number' &&
+    Number.isFinite(value[1]) &&
+    Math.abs(value[1]) <= 90
+  )
+}
+function validGeometry(value: unknown): value is [number, number][] {
+  return Array.isArray(value) && value.length > 0 && value.every(validCoordinate)
+}
 
 /**
  * แปลง maneuver ของ OSRM เป็นชนิดกลางของแอป
@@ -98,7 +109,7 @@ const MAJOR_ROAD_PATTERNS = [/^ถนน/, /\bRoad\b/i, /\bRd\.?\b/i, /\bAvenue\
 function detectHazard(step: OsrmStep): HazardKind | undefined {
   if (step.maneuver.type === 'depart' || step.maneuver.type === 'arrive') return undefined
 
-  const bearings = step.intersections?.[0]?.bearings.length ?? 0
+  const bearings = step.intersections?.[0]?.bearings?.length ?? 0
   if (bearings >= 4) return 'crossroads'
 
   const name = step.name?.trim()
@@ -113,16 +124,7 @@ export const osrmRoutingService: RoutingService = {
     destination: Place,
     options: RouteOptions = {},
   ): Promise<Route> {
-    try {
-      return await requestRoute(OSRM_BASE_URL, origin, destination, options, false)
-    } catch (err) {
-      // ผู้ใช้ยกเลิกเอง หรือไม่มีเส้นทางจริงๆ — ลองเซิร์ฟเวอร์สำรองไปก็ไม่ช่วย
-      if (err instanceof ServiceError && !err.retryable && err.code !== 'PROVIDER_ERROR') throw err
-
-      // ทางสำรองใช้ profile รถยนต์ ได้เส้นทางหยาบๆ ดีกว่าไม่ได้อะไรเลย
-      // แต่ต้องติดธงไว้ให้ชั้นบนเตือนผู้ใช้ก่อนเริ่มเดิน
-      return requestRoute(OSRM_FALLBACK_BASE_URL, origin, destination, options, true)
-    }
+    return requestRoute(OSRM_BASE_URL, origin, destination, options)
   },
 }
 
@@ -131,7 +133,6 @@ async function requestRoute(
   origin: LatLng,
   destination: Place,
   options: RouteOptions,
-  isFallback: boolean,
 ): Promise<Route> {
   const coords = `${origin.lng},${origin.lat};${destination.location.lng},${destination.location.lat}`
   const params = new URLSearchParams({
@@ -147,38 +148,63 @@ async function requestRoute(
     onRetry: (attempt) => options.onRetry?.(attempt),
   })
 
-  if (data.code !== 'Ok' || data.routes.length === 0) {
+  if (!data || data.code !== 'Ok' || !Array.isArray(data.routes) || data.routes.length === 0) {
     // NoRoute = หาเส้นทางไม่ได้จริงๆ ลองใหม่ก็ไม่ช่วย
     throw new ServiceError(
-      data.code === 'NoRoute' ? 'NOT_FOUND' : 'PROVIDER_ERROR',
-      data.message ?? data.code,
+      data?.code === 'NoRoute' ? 'NOT_FOUND' : 'PROVIDER_ERROR',
+      data?.message ?? data?.code,
       { retryable: false },
     )
   }
 
   const route = data.routes[0]
+  if (
+    !validGeometry(route?.geometry?.coordinates) ||
+    !Array.isArray(route.legs) ||
+    route.legs.some((leg) => !Array.isArray(leg?.steps)) ||
+    !Number.isFinite(route.distance) ||
+    route.distance < 0 ||
+    !Number.isFinite(route.duration) ||
+    route.duration < 0
+  )
+    throw new ServiceError('PROVIDER_ERROR')
   const rawSteps = route.legs.flatMap((leg) => leg.steps)
+  if (
+    rawSteps.length < 2 ||
+    rawSteps[0]?.maneuver?.type !== 'depart' ||
+    rawSteps.at(-1)?.maneuver?.type !== 'arrive' ||
+    rawSteps.some(
+      (step) =>
+        !validCoordinate(step?.maneuver?.location) ||
+        !validGeometry(step.geometry?.coordinates) ||
+        typeof step.name !== 'string' ||
+        !Number.isFinite(step.duration) ||
+        step.duration < 0 ||
+        !Number.isFinite(step.distance) ||
+        step.distance < 0,
+    )
+  )
+    throw new ServiceError('PROVIDER_ERROR')
 
   const steps: RouteStep[] = rawSteps.map((step, index) => ({
     id: `${index}`,
     maneuver: toManeuverType(step.maneuver),
     location: toLatLng(step.maneuver.location),
     distance: step.distance,
-    duration: isFallback ? step.distance / WALKING_SPEED_MPS : step.duration,
+    duration: step.duration,
     streetName: step.name || undefined,
     geometry: step.geometry.coordinates.map(toLatLng),
     hazard: detectHazard(step),
   }))
 
   return {
-    id: `${Date.now()}`,
+    id: crypto.randomUUID(),
     distance: route.distance,
-    // เวลาจากทางสำรองเป็นเวลาขับรถ ต้องคำนวณใหม่ด้วยความเร็วเดิน ไม่งั้นบอกผู้ใช้ผิดหลายเท่า
-    duration: isFallback ? route.distance / WALKING_SPEED_MPS : route.duration,
+    duration: route.duration,
     geometry: route.geometry.coordinates.map(toLatLng),
     steps,
     origin,
     destination,
-    usedFallbackProfile: isFallback,
+    usedFallbackProfile: false,
   }
 }

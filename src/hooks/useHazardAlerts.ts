@@ -33,7 +33,14 @@ export function useHazardAlerts(nav: UseNavigationResult, options: Options) {
   const warnedStepRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!enabled || nav.status !== 'navigating') return
+    if (
+      !enabled ||
+      nav.status !== 'navigating' ||
+      nav.suspended ||
+      nav.isRecalculating ||
+      nav.isOffRoute
+    )
+      return
 
     const progress = nav.progress
     if (!progress) return
@@ -53,10 +60,16 @@ export function useHazardAlerts(nav: UseNavigationResult, options: Options) {
         : t('hazard.majorRoadSpoken', { street: step.streetName ?? '' }),
       { priority: 'critical' },
     )
-  }, [enabled, nav.progress, nav.route?.id, nav.status, speak, t, vibrationEnabled])
-
-  // เริ่มเส้นทางใหม่ = ล้างความจำว่าเคยเตือนจุดไหนไปแล้ว
-  useEffect(() => {
-    warnedStepRef.current = null
-  }, [nav.route?.id])
+  }, [
+    enabled,
+    nav.progress,
+    nav.route?.id,
+    nav.status,
+    nav.suspended,
+    nav.isRecalculating,
+    nav.isOffRoute,
+    speak,
+    t,
+    vibrationEnabled,
+  ])
 }
