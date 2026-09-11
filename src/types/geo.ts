@@ -1,3 +1,5 @@
+import type { PlaceCategory } from './places'
+
 /** พิกัดภูมิศาสตร์แบบกลาง — ไม่ผูกกับ Leaflet หรือ Google Maps */
 export interface LatLng {
   lat: number
@@ -42,4 +44,10 @@ export interface Place {
   boundingBox?: BoundingBox
   /** ประเภทสถานที่จากผู้ให้บริการ เช่น "restaurant", "bus_stop" */
   category?: string
+  /**
+   * หมวดหมู่ของแอปเอง ใส่มาเมื่อสถานที่นี้มาจากการค้นแบบ "ใกล้ฉัน"
+   * ใช้ตั้งชื่อแทนให้สถานที่ที่ไม่มีชื่อในแผนที่ (ตู้เอทีเอ็ม ห้องน้ำสาธารณะ ป้ายรถเมล์)
+   * ซึ่งมีอยู่จำนวนมาก และถ้าปล่อยว่างผู้ใช้จะได้ยินแค่ความเงียบ
+   */
+  categoryKey?: PlaceCategory
 }

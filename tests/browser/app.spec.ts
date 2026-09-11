@@ -1,7 +1,12 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
-async function setup(page: Page, options: { denial?: boolean; speechFails?: boolean } = {}) {
+type OverpassMock = { places: unknown[]; obstacles: unknown[] } | 'fail'
+
+async function setup(
+  page: Page,
+  options: { denial?: boolean; speechFails?: boolean; overpass?: OverpassMock } = {},
+) {
   await page.addInitScript(({ denial, speechFails }) => {
     if (!localStorage.getItem('taathip.language')) localStorage.setItem('taathip.language', 'en')
     type TestWindow = Window & {
@@ -94,6 +99,15 @@ async function setup(page: Page, options: { denial?: boolean; speechFails?: bool
           display_name: 'Test place, Test road',
         },
       })
+    if (url.includes('/api/interpreter')) {
+      if (!options.overpass || options.overpass === 'fail') return route.abort()
+      // Overpass จริงกรองตามคำถามให้ฝั่งเซิร์ฟเวอร์ mock จึงต้องแยกตามคำถามด้วย
+      // ไม่งั้นผลของการค้นรอบตัวกับการตรวจสิ่งกีดขวางจะปนกัน
+      const asksForSteps = decodeURIComponent(url).includes('highway=steps')
+      return route.fulfill({
+        json: { elements: asksForSteps ? options.overpass.obstacles : options.overpass.places },
+      })
+    }
     if (url.includes('/route/v1/'))
       return route.fulfill({
         json: {
@@ -383,4 +397,77 @@ test('guidance, paused state and SOS dialog pass automated accessibility in ligh
     ).toEqual([])
     await page.keyboard.press('Escape')
   }
+})
+
+/** สิ่งที่ Overpass ตอบกลับมา แยกตามคำถามเหมือนของจริง */
+const overpass = {
+  places: [
+    {
+      type: 'node',
+      id: 101,
+      lat: 0.0005,
+      lon: 0.0005,
+      tags: { highway: 'bus_stop', name: 'Test bus stop' },
+    },
+    // ไม่มีชื่อ — ต้องแสดงชื่อหมวดแทน ไม่ใช่ปุ่มเปล่าที่ screen reader อ่านไม่ได้
+    { type: 'node', id: 102, lat: 0.0006, lon: 0.0004, tags: { highway: 'bus_stop' } },
+  ],
+  obstacles: [
+    {
+      type: 'way',
+      id: 201,
+      center: { lat: 0, lon: 0.0005 },
+      tags: { highway: 'steps', step_count: '12', handrail: 'yes', incline: 'up' },
+    },
+  ],
+}
+
+test('nearby category search lists places, names unnamed ones and sets a destination', async ({
+  page,
+}) => {
+  await setup(page, { overpass })
+  await page.getByRole('button', { name: 'Start and allow location access', exact: true }).click()
+  await expect(page.getByText('Good signal', { exact: false })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Bus & train', exact: true }).click()
+
+  // เจาะจงรายการผลลัพธ์ เพราะหมุดบนแผนที่ก็มีชื่อเดียวกัน (ตั้งใจให้เป็นแบบนั้น)
+  const results = page.getByRole('list', { name: 'Search results' })
+  const namedResult = results.getByRole('button', { name: /Test bus stop/ })
+  await expect(namedResult).toBeVisible()
+  // สถานที่ที่ไม่มีชื่อในแผนที่ต้องยังอ่านออกเสียงได้ ไม่ใช่ปุ่มเปล่า
+  await expect(results.getByRole('button', { name: /Public transport stop/ })).toBeVisible()
+
+  // หมุดบนแผนที่ต้องมีเลขกำกับตรงกับลำดับในรายการ เพื่ออ้างอิงถึงรายการเดียวกันได้
+  await expect(page.getByRole('button', { name: 'Search result 1: Test bus stop' })).toBeAttached()
+
+  await namedResult.click()
+  await expect(page.locator('#navigation-panel')).toContainText('turn left')
+})
+
+test('obstacle report separates a failed scan from a genuinely clear route', async ({ page }) => {
+  // กรณีตรวจไม่สำเร็จ ต้องไม่บอกว่าเส้นทางปลอดภัย
+  await setup(page, { overpass: 'fail' })
+  await startRoute(page)
+  await expect(
+    page
+      .getByRole('region', { name: 'Obstacles on the route' })
+      .getByText('Could not check for obstacles', { exact: true }),
+  ).toBeVisible()
+  // ต้องประกาศออกไปด้วย ไม่ใช่แค่ขึ้นบนจอ เพราะผู้ใช้ที่มองไม่เห็นจะไม่รู้เลย
+  await expect(page.getByTestId('announcer')).toContainText('does not mean the route is clear')
+})
+
+test('obstacle report lists steps found on the route with detail that matters before stepping', async ({
+  page,
+}) => {
+  await setup(page, { overpass })
+  await startRoute(page)
+
+  const report = page.getByRole('region', { name: 'Obstacles on the route' })
+  await expect(report).toContainText('1 set of steps')
+  // จำนวนขั้น ทิศขึ้นลง และราวจับ คือสามสิ่งที่ต้องรู้ก่อนเท้าแตะขั้นแรก
+  await expect(report).toContainText('12 steps')
+  await expect(report).toContainText('going up')
+  await expect(report).toContainText('with a handrail')
 })

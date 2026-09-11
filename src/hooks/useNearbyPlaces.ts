@@ -1,0 +1,107 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { currentLanguage } from '@/i18n'
+import { NEARBY_RADIUS_M, placesService } from '@/services'
+import { ServiceError } from '@/types'
+import type { LatLng, Place, PlaceCategory } from '@/types'
+
+export interface UseNearbyPlacesResult {
+  /** หมวดที่กำลังแสดงผลอยู่ (null = ยังไม่ได้ค้น) */
+  category: PlaceCategory | null
+  places: Place[]
+  isLoading: boolean
+  error: ServiceError | null
+  /** true = ค้นสำเร็จแล้วแต่ไม่พบอะไรในรัศมี */
+  isEmpty: boolean
+  radiusM: number
+  find: (category: PlaceCategory) => void
+  /** ขยายรัศมีแล้วค้นหมวดเดิมอีกครั้ง */
+  widen: () => void
+  clear: () => void
+}
+
+/** ขยายรัศมีทีละขั้นเมื่อไม่เจออะไรเลย — สูงสุด 2 กิโลเมตรพอสำหรับคนเดิน */
+const RADIUS_STEPS_M = [NEARBY_RADIUS_M, 1500, 2500]
+
+/**
+ * ค้นหาสถานที่รอบตัวตามหมวดหมู่
+ *
+ * ต่างจาก useSearch ตรงที่ไม่ต้องพิมพ์ชื่อ — ผู้ใช้แค่บอกว่าอยากได้ "อะไร"
+ * ระบบไปหาว่ารอบตัวมีของแบบนั้นอยู่ตรงไหนบ้าง เรียงจากใกล้ไปไกล
+ */
+export function useNearbyPlaces(center: LatLng | null): UseNearbyPlacesResult {
+  const [category, setCategory] = useState<PlaceCategory | null>(null)
+  const [places, setPlaces] = useState<Place[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<ServiceError | null>(null)
+  const [isEmpty, setIsEmpty] = useState(false)
+  const [radiusIndex, setRadiusIndex] = useState(0)
+
+  const controller = useRef<AbortController | null>(null)
+  const centerRef = useRef(center)
+  useEffect(() => {
+    centerRef.current = center
+  }, [center])
+
+  const run = useCallback(async (target: PlaceCategory, stepIndex: number) => {
+    const origin = centerRef.current
+    if (!origin) return
+
+    controller.current?.abort()
+    const request = new AbortController()
+    controller.current = request
+
+    setCategory(target)
+    setRadiusIndex(stepIndex)
+    setIsLoading(true)
+    setError(null)
+    setIsEmpty(false)
+    setPlaces([])
+
+    try {
+      const found = await placesService.findNearby(target, origin, {
+        radiusM: RADIUS_STEPS_M[stepIndex],
+        language: currentLanguage(),
+        signal: request.signal,
+      })
+      if (request.signal.aborted) return
+      setPlaces(found)
+      setIsEmpty(found.length === 0)
+    } catch (err) {
+      if (request.signal.aborted) return
+      setError(err instanceof ServiceError ? err : new ServiceError('UNKNOWN'))
+    } finally {
+      if (!request.signal.aborted) setIsLoading(false)
+    }
+  }, [])
+
+  const find = useCallback((target: PlaceCategory) => void run(target, 0), [run])
+
+  const widen = useCallback(() => {
+    if (!category || radiusIndex >= RADIUS_STEPS_M.length - 1) return
+    void run(category, radiusIndex + 1)
+  }, [category, radiusIndex, run])
+
+  const clear = useCallback(() => {
+    controller.current?.abort()
+    setCategory(null)
+    setPlaces([])
+    setError(null)
+    setIsEmpty(false)
+    setIsLoading(false)
+    setRadiusIndex(0)
+  }, [])
+
+  useEffect(() => () => controller.current?.abort(), [])
+
+  return {
+    category,
+    places,
+    isLoading,
+    error,
+    isEmpty,
+    radiusM: RADIUS_STEPS_M[radiusIndex],
+    find,
+    widen,
+    clear,
+  }
+}

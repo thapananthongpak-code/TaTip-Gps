@@ -270,3 +270,158 @@ summary {
   white-space: nowrap;
   border: 0;
 }
+
+/* ---------- ค้นหารอบตัว และรายงานสิ่งกีดขวาง ---------- */
+
+.nearby-panel,
+.obstacle-panel {
+  border: 2px solid #64748b;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: white;
+}
+.dark .nearby-panel,
+.dark .obstacle-panel {
+  background: #0f172a;
+  border-color: #94a3b8;
+}
+.nearby-panel > * + *,
+.obstacle-panel > * + * {
+  margin-top: 0.75rem;
+}
+.nearby-panel h2,
+.obstacle-panel h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.hint,
+.disclaimer {
+  font-size: 0.9rem;
+  color: #475569;
+}
+.dark .hint,
+.dark .disclaimer {
+  color: #cbd5e1;
+}
+.disclaimer {
+  border-left: 4px solid #b45309;
+  padding-left: 0.75rem;
+}
+.status-line {
+  font-weight: 700;
+  min-height: 1.5rem;
+}
+
+/*
+ * ปุ่มหมวดหมู่: สองคอลัมน์บนจอแคบ ขยายเป็นสามเมื่อมีที่พอ
+ * ใช้ auto-fit เพื่อให้ยังใช้ได้ตอนผู้ใช้ตั้งขนาดตัวอักษรใหญ่มาก
+ */
+.category-grid {
+  display: grid;
+  /*
+   * 7rem ทำให้ได้สองคอลัมน์บนจอมือถือ 390px ที่ขนาดตัวอักษรปกติ
+   * และยุบเหลือคอลัมน์เดียวเองเมื่อผู้ใช้ตั้งตัวอักษรใหญ่มาก ซึ่งเป็นพฤติกรรมที่ถูกต้อง
+   * เพราะปุ่มต้องกว้างพอให้ข้อความไม่ถูกตัด
+   */
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.75rem;
+}
+.category-button {
+  min-height: 64px;
+  border: 2px solid #64748b;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  font: inherit;
+  font-weight: 700;
+  background: white;
+  color: #0f172a;
+  cursor: pointer;
+}
+.dark .category-button {
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: #94a3b8;
+}
+.category-button.is-active {
+  background: #0b3d80;
+  border-color: #0b3d80;
+  color: white;
+}
+.category-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.result-list {
+  display: grid;
+  gap: 0.5rem;
+}
+.result-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 64px;
+  padding: 0.75rem;
+  border: 2px solid #64748b;
+  border-radius: 0.75rem;
+  background: white;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.dark .result-button {
+  background: #1e293b;
+  border-color: #94a3b8;
+}
+/* เลขกำกับตรงกับหมุดบนแผนที่ เพื่อให้อ้างอิงถึงรายการเดียวกันได้ */
+.result-index {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: #0b3d80;
+  color: white;
+  font-weight: 700;
+}
+.result-name {
+  display: block;
+  font-weight: 700;
+}
+.result-meta {
+  display: block;
+  font-size: 0.9rem;
+  color: #475569;
+}
+.dark .result-meta {
+  color: #cbd5e1;
+}
+
+.obstacle-list {
+  display: grid;
+  gap: 0.5rem;
+}
+.obstacle-list li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 2px solid #64748b;
+}
+.dark .obstacle-list li {
+  border-color: #94a3b8;
+}
+/* จุดที่ทำให้บาดเจ็บได้ทันทีต้องแยกออกจากจุดที่แค่ต้องระวัง */
+.obstacle-list li.is-high {
+  border-color: #b45309;
+  border-width: 3px;
+}
+.obstacle-distance {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

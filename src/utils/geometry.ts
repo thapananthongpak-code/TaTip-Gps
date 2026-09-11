@@ -69,3 +69,55 @@ export function remainingPathDistance(point: LatLng, path: LatLng[]): number {
   }
   return remaining
 }
+
+/**
+ * หาว่าจุดหนึ่งอยู่ตรงไหนของเส้นทาง
+ *
+ * คืนทั้งระยะห่างจากเส้นทาง (ใช้คัดว่าเกี่ยวข้องไหม)
+ * และระยะที่ต้องเดินจากจุดเริ่มต้นไปถึงตรงนั้น (ใช้เรียงลำดับและบอกว่า "อีกกี่เมตรจะถึง")
+ */
+export function projectOntoPath(
+  point: LatLng,
+  path: LatLng[],
+): { distanceM: number; alongM: number } {
+  if (path.length === 0) return { distanceM: Number.POSITIVE_INFINITY, alongM: 0 }
+  if (path.length === 1) return { distanceM: distanceToSegment(point, path[0], path[0]), alongM: 0 }
+
+  let best = { distanceM: Number.POSITIVE_INFINITY, alongM: 0 }
+  let travelled = 0
+
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i]
+    const b = path[i + 1]
+    const segmentLength = segmentLengthM(a, b)
+    const distance = distanceToSegment(point, a, b)
+
+    if (distance < best.distanceM) {
+      best = { distanceM: distance, alongM: travelled + fractionAlong(point, a, b) * segmentLength }
+    }
+    travelled += segmentLength
+  }
+
+  return best
+}
+
+/** ความยาวของช่วงเส้นหนึ่ง (เมตร) */
+function segmentLengthM(a: LatLng, b: LatLng): number {
+  const dLat = toRad(b.lat - a.lat) * EARTH_RADIUS_M
+  const dLng = toRad(b.lng - a.lng) * Math.cos(toRad(a.lat)) * EARTH_RADIUS_M
+  return Math.hypot(dLat, dLng)
+}
+
+/** จุดที่ใกล้ที่สุดบนช่วงเส้น อยู่ที่สัดส่วนเท่าไรของช่วงนั้น (0-1) */
+function fractionAlong(point: LatLng, a: LatLng, b: LatLng): number {
+  const scale = Math.cos(toRad(point.lat))
+  const ax = (a.lng - point.lng) * scale
+  const ay = a.lat - point.lat
+  const bx = (b.lng - point.lng) * scale
+  const by = b.lat - point.lat
+  const dx = bx - ax
+  const dy = by - ay
+  const lengthSq = dx * dx + dy * dy
+  if (lengthSq === 0) return 0
+  return Math.max(0, Math.min(1, (-ax * dx - ay * dy) / lengthSq))
+}

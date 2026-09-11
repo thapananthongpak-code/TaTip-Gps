@@ -2,11 +2,15 @@ import { localSettingsService } from './impl/localSettingsService'
 import { nominatimGeocodingService } from './impl/nominatimGeocodingService'
 import { osmMapService } from './impl/osmMapService'
 import { osrmRoutingService } from './impl/osrmRoutingService'
+import { overpassObstacleService } from './impl/overpassObstacleService'
+import { overpassPlacesService } from './impl/overpassPlacesService'
 import { webShareService } from './impl/webShareService'
 import { webSpeechService } from './impl/webSpeechService'
 import type {
   GeocodingService,
   MapService,
+  ObstacleService,
+  PlacesService,
   RoutingService,
   SettingsService,
   ShareService,
@@ -34,9 +38,17 @@ export const geocodingService: GeocodingService = nominatimGeocodingService
 /** สลับไป Google Directions ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
 export const routingService: RoutingService = osrmRoutingService
 
+/** ค้นหาสถานที่รอบตัวตามหมวดหมู่ — สลับไป Google Places Nearby ได้ที่บรรทัดนี้ */
+export const placesService: PlacesService = overpassPlacesService
+
+/** ตรวจสิ่งกีดขวางบนเส้นทางจากข้อมูลแผนที่ */
+export const obstacleService: ObstacleService = overpassObstacleService
+
 export type {
   GeocodingService,
   MapService,
+  ObstacleService,
+  PlacesService,
   RoutingService,
   SettingsService,
   ShareService,

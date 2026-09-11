@@ -109,7 +109,10 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "show": "Show supporting map",
-    "hide": "Hide map"
+    "hide": "Hide map",
+    "resultMarker": "Search result {{index}}: {{name}}",
+    "obstacleMarker": "{{label}} {{distance}} in",
+    "showResults": "Show search results on the map"
   },
   "actions": {
     "repeatStatus": "Repeat current status",
@@ -275,5 +278,87 @@
     "failed": "App speech failed to start or stopped unexpectedly. Stop somewhere safe. Check the installed voice language and volume, or use your screen reader. Test speech again before continuing.",
     "last": "Latest message",
     "ready": "Ready to test"
+  },
+  "nearby": {
+    "title": "Find nearby",
+    "hint": "Pick a category and the app finds what is around you, nearest first",
+    "searching": "Searching nearby",
+    "searchingSpoken": "Searching around you. This may take a moment.",
+    "resultsSpoken_one": "Found {{count}} place within {{radius}}. Tap it to set it as your destination.",
+    "resultsSpoken_other": "Found {{count}} places within {{radius}}. Tap one to set it as your destination.",
+    "noResults": "Nothing found within {{radius}}",
+    "noResultsSpoken": "Nothing found within {{radius}}. Try the widen search button.",
+    "widen": "Widen the search radius",
+    "radiusLabel": "Within {{radius}}",
+    "unnamed": {
+      "transit": "Public transport stop",
+      "convenience": "Shop",
+      "food": "Place to eat",
+      "pharmacy": "Pharmacy",
+      "hospital": "Medical facility",
+      "bank": "Bank or ATM",
+      "toilets": "Public toilet",
+      "government": "Government office"
+    },
+    "category": {
+      "transit": "Bus & train",
+      "convenience": "Convenience store",
+      "food": "Food",
+      "pharmacy": "Pharmacy",
+      "hospital": "Hospital",
+      "bank": "Bank & ATM",
+      "toilets": "Toilets",
+      "government": "Police & government"
+    },
+    "unavailable": "Nearby search is unavailable right now — the map data service is not responding",
+    "unavailableSpoken": "Nearby search is unavailable right now because the map data service is not responding. Please try again, or search by place name instead."
+  },
+  "obstacle": {
+    "title": "Obstacles on the route",
+    "scanning": "Checking the route for obstacles",
+    "scanningSpoken": "Checking the route for obstacles",
+    "none": "No obstacles recorded in the map data",
+    "noneSpoken": "No obstacles are recorded in the map data for this route, but please keep using your cane as usual.",
+    "failed": "Could not check for obstacles",
+    "failedSpoken": "Could not check for obstacles. This does not mean the route is clear. Please walk with extra care.",
+    "summarySpoken": "This route has {{summary}}",
+    "atDistance": "{{distance}} in",
+    "readReport": "Read the obstacle report",
+    "disclaimer": "Only obstacles recorded in the map data can be found — such as steps, gates and construction. It cannot detect parked motorcycles, street stalls, bins or standing signs. Always use your cane.",
+    "count": {
+      "steps_one": "{{count}} set of steps",
+      "steps_other": "{{count}} sets of steps",
+      "barrier_one": "{{count}} gate or bollard",
+      "barrier_other": "{{count}} gates or bollards",
+      "kerb_one": "{{count}} raised kerb",
+      "kerb_other": "{{count}} raised kerbs",
+      "construction_one": "{{count}} construction zone",
+      "construction_other": "{{count}} construction zones",
+      "crossing_no_tactile_one": "{{count}} crossing without tactile paving",
+      "crossing_no_tactile_other": "{{count}} crossings without tactile paving",
+      "narrow_one": "{{count}} narrow section",
+      "narrow_other": "{{count}} narrow sections"
+    },
+    "label": {
+      "steps": "Steps",
+      "barrier": "Gate or bollard",
+      "kerb": "Raised kerb",
+      "construction": "Construction zone",
+      "crossing_no_tactile": "Crossing without tactile paving",
+      "narrow": "Narrow section"
+    },
+    "stepsSpoken": "Caution. In {{distance}} there are steps {{direction}} {{count}} {{handrail}}. Please check the first step with your cane before stepping.",
+    "barrierSpoken": "Caution. In {{distance}} there is a gate or bollard across the path.",
+    "kerbSpoken": "Caution. In {{distance}} there is a raised kerb to step over.",
+    "constructionSpoken": "Caution. In {{distance}} there is a construction zone. The path may be closed or diverted. Please slow down and ask for help if needed.",
+    "crossing_no_tactileSpoken": "Caution. In {{distance}} there is a crossing without tactile paving.",
+    "narrowSpoken": "Caution. In {{distance}} the path narrows.",
+    "incline": {
+      "up": "going up",
+      "down": "going down"
+    },
+    "stepCount_one": "{{count}} step",
+    "stepCount_other": "{{count}} steps",
+    "handrail": "with a handrail"
   }
 }

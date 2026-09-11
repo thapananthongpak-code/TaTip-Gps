@@ -7,6 +7,8 @@ import { GpsStatusPanel } from '@/components/GpsStatusPanel'
 import { LanguageToggle } from '@/components/LanguageToggle'
 import { MapView } from '@/components/MapView'
 import { NavigationPanel } from '@/components/NavigationPanel'
+import { NearbyPlaces } from '@/components/NearbyPlaces'
+import { ObstacleReport } from '@/components/ObstacleReport'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { PermissionGate } from '@/components/PermissionGate'
 import { SafetyPanel } from '@/components/SafetyPanel'
@@ -22,19 +24,25 @@ import { useHazardAlerts } from '@/hooks/useHazardAlerts'
 import { useLiveShare } from '@/hooks/useLiveShare'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useNavigationAnnouncer } from '@/hooks/useNavigationAnnouncer'
+import { useNearbyPlaces } from '@/hooks/useNearbyPlaces'
+import { useObstacleAlerts } from '@/hooks/useObstacleAlerts'
+import { useObstacleScan } from '@/hooks/useObstacleScan'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useSettings } from '@/hooks/useSettings'
 import { useShareRoute } from '@/hooks/useShareRoute'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useWhereAmI } from '@/hooks/useWhereAmI'
 import { speechService } from '@/services'
+import type { Place } from '@/types'
 import { speakDistance } from '@/utils/format'
 import { vibrate } from '@/utils/vibration'
 
 export default function App() {
   const { t } = useTranslation()
   const [started, setStarted] = useState(false)
-  const [showMap, setShowMap] = useState(false)
+  // แผนที่แสดงตั้งแต่แรก ไม่ซ่อนไว้หลังปุ่ม เพราะผู้ใช้สายตาเลือนรางและคนที่ช่วยเหลือ
+  // ใช้แผนที่เพื่อยืนยันว่าระบบเข้าใจตำแหน่งถูกต้องหรือไม่
+  const [showMap, setShowMap] = useState(true)
   const [emergencyOpen, setEmergencyOpen] = useState(false)
   const [now, setNow] = useState(Date.now)
   const [visible, setVisible] = useState(() => !document.hidden)
@@ -69,6 +77,8 @@ export default function App() {
   const nav = useNavigation(geo.position, usable)
   const active = nav.status !== 'idle' && nav.status !== 'arrived'
   const where = useWhereAmI(gpsUsable ? geo.position : null)
+  const nearby = useNearbyPlaces(gpsUsable ? geo.position : null)
+  const obstacleScan = useObstacleScan(nav.route, started)
   const share = useLiveShare({
     position: gpsUsable ? geo.position : null,
     destination: nav.destination,
@@ -91,6 +101,10 @@ export default function App() {
   useNavigationAnnouncer(nav, started, audio.mode)
   useHazardAlerts(nav, {
     enabled: started && settings.settings.hazardAlertsEnabled,
+    vibrationEnabled: settings.settings.vibrationEnabled,
+  })
+  useObstacleAlerts(nav, obstacleScan.report.obstacles, nav.route, {
+    enabled: started && usable && settings.settings.hazardAlertsEnabled,
     vibrationEnabled: settings.settings.vibrationEnabled,
   })
   const vibrated = useRef('')
@@ -158,6 +172,16 @@ export default function App() {
     unlock,
   ])
 
+  const chooseDestination = useCallback(
+    (place: Place) => {
+      speechService.cancel()
+      nearby.clear()
+      nav.start(place)
+      requestAnimationFrame(() => document.getElementById('navigation-panel')?.focus())
+    },
+    [nav, nearby],
+  )
+
   const openEmergency = () => {
     speechService.cancel()
     setEmergencyOpen(true)
@@ -199,22 +223,29 @@ export default function App() {
         {started && (
           <section className="primary-controls" aria-label={t('a11y.mainLabel')}>
             {nav.status === 'idle' ? (
-              <SearchPanel
-                position={geo.position}
-                onSelect={(place) => {
-                  speechService.cancel()
-                  nav.start(place)
-                  requestAnimationFrame(() => document.getElementById('navigation-panel')?.focus())
-                }}
-                isOnline={online}
-              />
+              <SearchPanel position={geo.position} onSelect={chooseDestination} isOnline={online} />
             ) : (
               <NavigationPanel nav={{ ...nav, stop: stopNavigation }} onRepeat={repeat} />
+            )}
+            {nav.status === 'idle' && (
+              <NearbyPlaces
+                nearby={nearby}
+                position={gpsUsable ? geo.position : null}
+                onSelect={chooseDestination}
+                isOnline={online}
+              />
             )}
             <BigButton variant="secondary" onClick={where.announce} disabled={where.isLoading}>
               {t('whereAmI.button')}
             </BigButton>
             {where.address && <p>{where.address}</p>}
+            {nav.route && settings.settings.hazardAlertsEnabled && (
+              <ObstacleReport
+                report={obstacleScan.report}
+                isScanning={obstacleScan.isScanning}
+                announce={started}
+              />
+            )}
             <GpsStatusPanel
               geo={geo}
               onRepeatStatus={() => {
@@ -227,6 +258,40 @@ export default function App() {
               }}
             />
           </section>
+        )}
+        {started && (
+          <>
+            <BigButton
+              variant="secondary"
+              aria-expanded={showMap}
+              aria-controls="visual-map"
+              onClick={() => setShowMap((value) => !value)}
+            >
+              {t(showMap ? 'map.hide' : 'map.show')}
+            </BigButton>
+            <div id="visual-map" hidden={!showMap}>
+              {showMap && (
+                <>
+                  <div className="map-frame">
+                    <MapView
+                      position={geo.position}
+                      isPoorAccuracy={geo.isPoorAccuracy}
+                      isStale={geo.isStale}
+                      follow={follow}
+                      onUserPan={() => setFollow(false)}
+                      route={nav.route}
+                      results={nav.status === 'idle' ? nearby.places : []}
+                      obstacles={obstacleScan.report.obstacles}
+                      onSelectResult={chooseDestination}
+                    />
+                  </div>
+                  <BigButton variant="secondary" onClick={() => setFollow(true)}>
+                    {t('map.recenter')}
+                  </BigButton>
+                </>
+              )}
+            </div>
+          </>
         )}
         <VoiceControls />
         {!started && (
@@ -259,37 +324,6 @@ export default function App() {
           <summary>{t('appearance.openPanel')}</summary>
           <AppearancePanel settings={settings} />
         </details>
-        {started && (
-          <>
-            <BigButton
-              variant="secondary"
-              aria-expanded={showMap}
-              aria-controls="visual-map"
-              onClick={() => setShowMap((value) => !value)}
-            >
-              {t(showMap ? 'map.hide' : 'map.show')}
-            </BigButton>
-            <div id="visual-map" hidden={!showMap}>
-              {showMap && (
-                <>
-                  <div className="map-frame">
-                    <MapView
-                      position={geo.position}
-                      isPoorAccuracy={geo.isPoorAccuracy}
-                      isStale={geo.isStale}
-                      follow={follow}
-                      onUserPan={() => setFollow(false)}
-                      route={nav.route}
-                    />
-                  </div>
-                  <BigButton variant="secondary" onClick={() => setFollow(true)}>
-                    {t('map.recenter')}
-                  </BigButton>
-                </>
-              )}
-            </div>
-          </>
-        )}
         <p className="safety-note">{t('nav.safetyNote')}</p>
         <footer>
           <a

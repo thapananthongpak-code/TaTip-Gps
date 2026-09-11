@@ -1,4 +1,5 @@
 export * from './geo'
+export * from './places'
 export * from './safety'
 export * from './navigation'
 export * from './service'
