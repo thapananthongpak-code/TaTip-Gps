@@ -9,7 +9,6 @@ import { useSpeech } from './useSpeech'
 
 interface Options {
   enabled: boolean
-  vibrationEnabled: boolean
 }
 
 /** ประโยคเตือนของสิ่งกีดขวางแต่ละชนิด พร้อมรายละเอียดที่ช่วยเตรียมตัวได้จริง */
@@ -48,7 +47,7 @@ export function useObstacleAlerts(
   nav: UseNavigationResult,
   obstacles: Obstacle[],
   route: Route | null,
-  { enabled, vibrationEnabled }: Options,
+  { enabled }: Options,
 ) {
   const { t } = useTranslation()
   const { speak } = useSpeech()
@@ -78,8 +77,8 @@ export function useObstacleAlerts(
       if (ahead > OBSTACLE_WARNING_DISTANCE_M) continue
 
       warned.current.add(obstacle.id)
-      vibrate('hazard', vibrationEnabled)
+      vibrate('hazard')
       speak(describe(obstacle, t, ahead), { priority: 'critical' })
     }
-  }, [enabled, nav.status, nav.progress, obstacles, route, speak, t, vibrationEnabled])
+  }, [enabled, nav.status, nav.progress, obstacles, route, speak, t])
 }

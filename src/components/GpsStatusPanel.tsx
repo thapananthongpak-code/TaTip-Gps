@@ -6,14 +6,19 @@ import { BigButton } from './BigButton'
 
 interface Props {
   geo: UseGeolocationResult
-  onRepeatStatus: () => void
 }
 
 /**
- * แผงสถานะ GPS — เป็น "แหล่งข้อมูลหลัก" ของแอปสำหรับผู้ใช้ที่มองไม่เห็น
- * ตัวเลขอัปเดตบนหน้าจอ ส่วนการประกาศใช้ช่องเสียงกลาง ไม่อ่านซ้ำทุก GPS tick
+ * สถานะ GPS แบบบรรทัดเดียว
+ *
+ * เดิมเป็นแผงเต็มพร้อมตารางสองคอลัมน์และปุ่มของตัวเอง ซึ่งกินพื้นที่มาก
+ * ทั้งที่เนื้อหาจริงมีแค่สองค่า ย่อเหลือบรรทัดเดียวเพื่อลดความรกของหน้า
+ * ส่วนการฟังรายละเอียดย้ายไปรวมกับปุ่ม "ฉันอยู่ที่ไหน" ให้เหลือปุ่มเดียว
+ *
+ * ยังคงแสดงไว้เสมอ ไม่ซ่อนในหน้าตั้งค่า เพราะความแม่นยำที่แย่ลง
+ * คือสัญญาณว่าอย่าเชื่อการนำทางในตอนนั้น ซึ่งผู้ใช้ต้องเห็นตลอดเวลา
  */
-export function GpsStatusPanel({ geo, onRepeatStatus }: Props) {
+export function GpsStatusPanel({ geo }: Props) {
   const { t } = useTranslation()
   const { status, position, error, isPoorAccuracy, isStale } = geo
   const [now, setNow] = useState(() => Date.now())
@@ -27,14 +32,9 @@ export function GpsStatusPanel({ geo, onRepeatStatus }: Props) {
 
   if (error) {
     return (
-      <section
-        aria-label={t('gps.tracking')}
-        className="border-t-4 border-danger-500 bg-danger-500/10 p-4"
-      >
-        <p className="text-lg font-bold text-danger-600 dark:text-red-300">
-          {t(`errors.${error.code}`)}
-        </p>
-        <BigButton variant="danger" onClick={geo.retry} className="mt-3 w-full">
+      <section aria-label={t('gps.tracking')} className="gps-status is-error">
+        <p className="font-bold">{t(`errors.${error.code}`)}</p>
+        <BigButton variant="danger" onClick={geo.retry}>
           {t('errors.retryButton')}
         </BigButton>
       </section>
@@ -44,35 +44,19 @@ export function GpsStatusPanel({ geo, onRepeatStatus }: Props) {
   const degraded = isPoorAccuracy || isStale || (position?.accuracy ?? 0) > 30
 
   return (
-    <section
-      aria-label={t('gps.tracking')}
-      className="border-t-2 border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
-    >
-      {/* ประกาศสถานะให้ screen reader ทราบทุกครั้งที่เปลี่ยน โดยไม่ขัดจังหวะสิ่งที่กำลังอ่านอยู่ */}
-      <p className="text-lg font-bold">
+    <section aria-label={t('gps.tracking')} className="gps-status">
+      <span className="font-bold">
         {status === 'acquiring' && t('gps.acquiring')}
         {status === 'tracking' && !isStale && t('gps.tracking')}
         {status === 'tracking' && isStale && t('gps.staleLabel')}
-      </p>
-
+      </span>
       {position && (
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-base">
-          <dt className="text-slate-600 dark:text-slate-300">{t('gps.accuracyLabel')}</dt>
-          <dd
-            className={`font-bold ${degraded ? 'text-danger-600 dark:text-red-300' : 'text-safe-500 dark:text-green-300'}`}
-          >
-            ±{formatDistance(position.accuracy)} (
-            {degraded ? t('gps.accuracyPoor') : t('gps.accuracyGood')})
-          </dd>
-
-          <dt className="text-slate-600 dark:text-slate-300">{t('gps.lastUpdate')}</dt>
-          <dd className="font-bold">{formatAge(position.timestamp, now)}</dd>
-        </dl>
+        <span className={degraded ? 'gps-accuracy is-degraded' : 'gps-accuracy'}>
+          ±{formatDistance(position.accuracy)} ·{' '}
+          {degraded ? t('gps.accuracyPoor') : t('gps.accuracyGood')} ·{' '}
+          {formatAge(position.timestamp, now)}
+        </span>
       )}
-
-      <BigButton variant="secondary" onClick={onRepeatStatus} className="mt-3 w-full">
-        {t('actions.repeatStatus')}
-      </BigButton>
     </section>
   )
 }

@@ -51,17 +51,11 @@ export type ThemePreference = 'system' | 'light' | 'dark'
 export interface AppSettings {
   fontScale: FontScale
   theme: ThemePreference
-  /** เปิดการสั่นเตือนควบคู่กับเสียง */
-  vibrationEnabled: boolean
-  /** เปิดการเตือนจุดเสี่ยงบนเส้นทาง */
-  hazardAlertsEnabled: boolean
   emergencyContacts: EmergencyContact[]
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   fontScale: 'normal',
   theme: 'system',
-  vibrationEnabled: true,
-  hazardAlertsEnabled: true,
   emergencyContacts: [],
 }

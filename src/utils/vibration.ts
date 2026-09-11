@@ -26,11 +26,15 @@ export function isVibrationSupported(): boolean {
 /**
  * สั่นตามรูปแบบที่กำหนด
  *
+ * ไม่มีสวิตช์เปิดปิดให้ตั้งค่า เพราะการสั่นเป็นช่องทางเสริมที่ไม่รบกวนใคร
+ * อุปกรณ์ที่ไม่รองรับก็เงียบไปเอง และผู้ที่ไม่ต้องการปิดได้จากการตั้งค่าของเครื่อง
+ * ทุกตัวเลือกที่ตัดออกได้คือหนึ่งอย่างที่ผู้ใช้ไม่ต้องเรียนรู้เพิ่ม
+ *
  * เงียบไปเฉยๆ ถ้าอุปกรณ์ไม่รองรับ (iOS Safari ยังไม่รองรับ Vibration API)
  * การสั่นจึงเป็น "ช่องทางเสริม" เสมอ ไม่ใช่ช่องทางเดียวที่ใช้สื่อสารเรื่องสำคัญ
  */
-export function vibrate(pattern: VibrationPattern, enabled: boolean): void {
-  if (!enabled || !isVibrationSupported()) return
+export function vibrate(pattern: VibrationPattern): void {
+  if (!isVibrationSupported()) return
   try {
     navigator.vibrate(VIBRATION_PATTERNS[pattern] as unknown as number[])
   } catch {

@@ -425,3 +425,48 @@ summary {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- สถานะ GPS แบบบรรทัดเดียว ---------- */
+
+.gps-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+  font-size: 0.95rem;
+}
+.gps-accuracy {
+  color: #14682f;
+  font-weight: 700;
+}
+.dark .gps-accuracy {
+  color: #86efac;
+}
+.gps-accuracy.is-degraded {
+  color: #b81f1f;
+}
+.dark .gps-accuracy.is-degraded {
+  color: #fca5a5;
+}
+.gps-status.is-error {
+  display: grid;
+  gap: 0.75rem;
+  border-left: 4px solid #b81f1f;
+  padding-left: 0.75rem;
+  font-size: 1rem;
+}
+
+/* ค้นหารอบตัวไม่ใช่กล่องซ้อนกล่องอีกต่อไป — เป็นส่วนหนึ่งของแผงควบคุมหลัก */
+.primary-controls .nearby-panel,
+.primary-controls .obstacle-panel {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+.primary-controls .nearby-panel {
+  border-top: 2px solid #cbd5e1;
+  padding-top: 1rem;
+}
+.dark .primary-controls .nearby-panel {
+  border-top-color: #334155;
+}

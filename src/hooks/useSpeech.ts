@@ -1,27 +1,20 @@
-import { useCallback, useMemo } from 'react'
-import { currentLanguage } from '@/i18n'
+import { useCallback } from 'react'
 import { speechService } from '@/services'
 import type { SpeakOptions } from '@/services/interfaces'
 
 /**
  * ครอบ speechService ให้ใช้ใน component ได้สะดวก
  *
- * ทุกครั้งที่พูด จะแนบภาษาปัจจุบันไปด้วยเสมอ ไม่ต้องให้ผู้เรียกจำเอง
- * ป้องกันกรณีสลับภาษาแล้วมีข้อความค้างในคิวที่ยังใช้ภาษาเดิม
+ * ข้อความถูกประกาศผ่าน live region ให้โปรแกรมอ่านหน้าจอเป็นผู้อ่าน
+ * จึงไม่ต้องบอกภาษาหรือปลดล็อกเสียงเหมือนตอนที่แอปสังเคราะห์เสียงเอง
+ * เพราะโปรแกรมอ่านหน้าจออ่านตามภาษาของเนื้อหาบนหน้าอยู่แล้ว
  */
 export function useSpeech() {
-  const supported = useMemo(() => speechService.isSupported(), [])
-
-  // อ่านภาษาปัจจุบันตอนที่ "เรียกพูด" ไม่ใช่ตอนสร้าง callback
-  // จึงได้ภาษาล่าสุดเสมอโดยไม่ต้องผูกภาษาเป็น dependency
   const speak = useCallback((text: string, options?: SpeakOptions) => {
-    speechService.speak(text, { language: currentLanguage(), ...options })
+    speechService.speak(text, options)
   }, [])
 
   const cancel = useCallback(() => speechService.cancel(), [])
 
-  /** เรียกครั้งเดียวจาก user gesture แรก เพื่อปลดล็อกเสียงบน iOS */
-  const unlock = useCallback(() => speechService.unlock(), [])
-
-  return { supported, speak, cancel, unlock }
+  return { speak, cancel }
 }

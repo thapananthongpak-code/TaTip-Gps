@@ -215,32 +215,14 @@ export function SafetyPanel({ settings, onSos, hasPosition, share }: Props) {
         <ContactForm onAdd={addContact} />
       </div>
 
-      {/* ตัวเลือกการเตือน */}
       <div className="mt-4 flex flex-col gap-3">
-        <h3 className="text-base font-bold">{t('settings.alertsTitle')}</h3>
-
-        <label className="flex min-h-touch items-center gap-3 text-lg">
-          <input
-            type="checkbox"
-            checked={values.hazardAlertsEnabled}
-            onChange={(e) => settings.setHazardAlertsEnabled(e.target.checked)}
-            className="size-6"
-          />
-          {t('settings.hazardAlerts')}
-        </label>
-        {/* บอกข้อจำกัดตรงๆ ผู้ใช้ต้องไม่เข้าใจว่าคำเตือนนี้ยืนยันว่ามีทางข้ามจริง */}
-        <p className="-mt-1 text-sm text-slate-600 dark:text-slate-300">{t('hazard.disclaimer')}</p>
-
-        <label className="flex min-h-touch items-center gap-3 text-lg">
-          <input
-            type="checkbox"
-            checked={values.vibrationEnabled}
-            onChange={(e) => settings.setVibrationEnabled(e.target.checked)}
-            disabled={!isVibrationSupported()}
-            className="size-6"
-          />
-          {t('settings.vibration')}
-        </label>
+        {/*
+          คำเตือนจุดเสี่ยงและการสั่นเปิดอยู่เสมอ ไม่ทำเป็นสวิตช์ให้ปิด
+          เพราะเป็นข้อมูลความปลอดภัย และทุกตัวเลือกที่ตัดออกได้
+          คือหนึ่งอย่างที่ผู้ใช้ไม่ต้องเรียนรู้เพิ่ม
+          เหลือไว้แค่คำอธิบายข้อจำกัด ซึ่งผู้ใช้ต้องรู้ ไม่ใช่ต้องตัดสินใจ
+        */}
+        <p className="text-sm text-slate-600 dark:text-slate-300">{t('hazard.disclaimer')}</p>
         {!isVibrationSupported() && (
           <p className="text-sm text-slate-600 dark:text-slate-300">
             {t('settings.vibrationUnsupported')}

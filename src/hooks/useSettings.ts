@@ -9,8 +9,6 @@ export interface UseSettingsResult {
   storageFailed: boolean
   setFontScale: (scale: FontScale) => void
   setTheme: (theme: ThemePreference) => void
-  setVibrationEnabled: (enabled: boolean) => void
-  setHazardAlertsEnabled: (enabled: boolean) => void
   addContact: (name: string, phone: string) => void
   removeContact: (id: string) => void
   /** ลบข้อมูลทั้งหมดที่แอปเก็บไว้บนเครื่อง */
@@ -44,16 +42,6 @@ export function useSettings(): UseSettingsResult {
 
   const setTheme = useCallback(
     (theme: ThemePreference) => update({ ...settings, theme }),
-    [settings, update],
-  )
-
-  const setVibrationEnabled = useCallback(
-    (vibrationEnabled: boolean) => update({ ...settings, vibrationEnabled }),
-    [settings, update],
-  )
-
-  const setHazardAlertsEnabled = useCallback(
-    (hazardAlertsEnabled: boolean) => update({ ...settings, hazardAlertsEnabled }),
     [settings, update],
   )
 
@@ -100,8 +88,6 @@ export function useSettings(): UseSettingsResult {
     storageFailed,
     setFontScale,
     setTheme,
-    setVibrationEnabled,
-    setHazardAlertsEnabled,
     addContact,
     removeContact,
     clearAll,

@@ -5,7 +5,7 @@ import { osrmRoutingService } from './impl/osrmRoutingService'
 import { overpassObstacleService } from './impl/overpassObstacleService'
 import { overpassPlacesService } from './impl/overpassPlacesService'
 import { webShareService } from './impl/webShareService'
-import { webSpeechService } from './impl/webSpeechService'
+import { screenReaderAnnouncer } from './impl/screenReaderAnnouncer'
 import type {
   GeocodingService,
   MapService,
@@ -24,7 +24,12 @@ import type {
  */
 export const mapService: MapService = osmMapService
 
-export const speechService: SpeechService = webSpeechService
+/**
+ * แอปประกาศผ่านโปรแกรมอ่านหน้าจออย่างเดียว ไม่สังเคราะห์เสียงเอง
+ * ถ้าวันหนึ่งต้องรองรับผู้ใช้ที่ไม่ได้เปิดโปรแกรมอ่านหน้าจอ ให้เขียน implementation ใหม่
+ * ที่ใช้ SpeechSynthesis แล้วสลับที่บรรทัดนี้ — ส่วนอื่นของแอปไม่ต้องแก้
+ */
+export const speechService: SpeechService = screenReaderAnnouncer
 
 /** เก็บค่าตั้งค่าบนเครื่องผู้ใช้เท่านั้น */
 export const settingsService: SettingsService = localSettingsService

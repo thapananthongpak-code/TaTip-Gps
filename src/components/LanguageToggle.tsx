@@ -11,7 +11,7 @@ import { speechService } from '@/services'
  * - aria-label เขียนด้วย "ภาษาปลายทาง" เสมอ (ตอนใช้ไทยจะอ่านว่า "เปลี่ยนเป็นภาษาอังกฤษ")
  *   ผู้ใช้จึงรู้ว่ากดแล้วจะได้อะไร ไม่ใช่รู้แค่ว่าตอนนี้เป็นภาษาอะไร
  * - lang บนตัวป้ายกำกับไว้ให้ screen reader ออกเสียงชื่อภาษาด้วยสำเนียงที่ถูก
- * - ยกเลิกเสียงที่ค้างในคิวก่อนพูดยืนยัน ไม่งั้นจะได้ยินภาษาเก่าต่อจนจบ
+ * - ยกเลิกข้อความที่ค้างในคิวก่อนประกาศยืนยัน ไม่งั้นจะได้ยินภาษาเก่าต่อจนจบ
  */
 export function LanguageToggle() {
   const { t, i18n } = useTranslation()
@@ -21,10 +21,9 @@ export function LanguageToggle() {
 
   const handleToggle = useCallback(async () => {
     speechService.cancel()
-    speechService.unlock()
     await i18n.changeLanguage(nextLanguage)
     // อ่านคีย์เดิมใหม่หลังเปลี่ยนภาษาแล้ว จึงได้ประโยคยืนยันเป็นภาษาใหม่
-    speak(i18n.t('language.switchedSpoken'), { priority: 'critical', language: nextLanguage })
+    speak(i18n.t('language.switchedSpoken'), { priority: 'critical' })
   }, [i18n, nextLanguage, speak])
 
   return (

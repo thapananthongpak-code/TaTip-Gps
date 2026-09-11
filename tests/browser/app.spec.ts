@@ -3,20 +3,15 @@ import AxeBuilder from '@axe-core/playwright'
 
 type OverpassMock = { places: unknown[]; obstacles: unknown[] } | 'fail'
 
-async function setup(
-  page: Page,
-  options: { denial?: boolean; speechFails?: boolean; overpass?: OverpassMock } = {},
-) {
-  await page.addInitScript(({ denial, speechFails }) => {
+async function setup(page: Page, options: { denial?: boolean; overpass?: OverpassMock } = {}) {
+  await page.addInitScript(({ denial }) => {
     if (!localStorage.getItem('taathip.language')) localStorage.setItem('taathip.language', 'en')
     type TestWindow = Window & {
       __fix: (lat: number, lng: number, accuracy?: number) => void
       __said: string[]
-      __failSpeech: boolean
     }
     const target = window as unknown as TestWindow
     target.__said = []
-    target.__failSpeech = !!speechFails
     let success: PositionCallback | null = null
     target.__fix = (lat, lng, accuracy = 5) =>
       success?.({
@@ -62,11 +57,8 @@ async function setup(
     Object.defineProperty(window, 'speechSynthesis', {
       value: {
         speak(u: FakeSpeech) {
+          // บันทึกไว้เพื่อพิสูจน์ว่าแอปไม่เคยเรียก ไม่ใช่เพื่อจำลองการพูด
           target.__said.push(u.text)
-          if (!target.__failSpeech) {
-            setTimeout(() => u.onstart?.(), 0)
-            setTimeout(() => u.onend?.(), 100)
-          }
         },
         cancel() {},
         resume() {},
@@ -189,12 +181,13 @@ async function startRoute(page: Page) {
   await expect(page.locator('#navigation-panel')).toContainText('turn left')
 }
 
-test('reader mode uses one polite live region and never invokes app speech', async ({ page }) => {
+test('announcements go through one polite live region and the app never synthesizes speech', async ({
+  page,
+}) => {
   await setup(page)
-  await page.getByRole('button', { name: 'Test voice / retry' }).click()
-  await expect(page.getByTestId('announcer')).toContainText('Taa-Thip audio test')
-  expect(await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).toEqual([])
   await startRoute(page)
+  // แอปประกาศผ่านโปรแกรมอ่านหน้าจออย่างเดียว ห้ามเรียก SpeechSynthesis เองแม้ครั้งเดียว
+  expect(await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).toEqual([])
   await fix(page, 0, 0.00087)
   await expect(page.locator('#navigation-panel')).toContainText('turn left')
   await expect(page.locator('[aria-live="assertive"]')).toHaveCount(0)
@@ -208,14 +201,6 @@ test('navigation pauses for poor GPS and suppresses walking instructions', async
   await expect(page.locator('#navigation-panel')).not.toContainText('Follow the route')
   await fix(page, 0, 0.0009, 5)
   await expect(page.locator('#navigation-panel')).toContainText('turn left')
-})
-test('speech engine silence surfaces a failure and pauses navigation', async ({ page }) => {
-  await setup(page, { speechFails: true })
-  await page.getByRole('combobox', { name: 'Spoken guidance', exact: true }).selectOption('app')
-  await page.getByRole('button', { name: 'Test voice / retry' }).click()
-  await expect(page.locator('.failure-notice')).toContainText('App speech failed', {
-    timeout: 8000,
-  })
 })
 test('SOS remains usable with denied GPS; dialog supports keyboard and sends nothing on open', async ({
   page,
@@ -254,7 +239,7 @@ test('keyboard settings, language persistence, mobile reflow and automated acces
   page,
 }) => {
   await setup(page)
-  await page.getByText('Display settings', { exact: true }).click()
+  await page.getByText('Settings', { exact: true }).click()
   await page.getByRole('radio', { name: 'Extra large' }).check()
   await page.getByRole('radio', { name: 'Dark', exact: true }).check()
   await page.setViewportSize({ width: 320, height: 640 })
@@ -279,27 +264,6 @@ test('app shell reopens offline after service worker installation', async ({ pag
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Taa-Thip Navigator' })).toBeVisible()
   await expect(page.getByText(/Offline: search and new routes/)).toBeVisible()
-})
-
-test('speech failure during a route suspends guidance until explicit successful retry', async ({
-  page,
-}) => {
-  await setup(page)
-  await page.getByRole('combobox', { name: 'Spoken guidance', exact: true }).selectOption('app')
-  await startRoute(page)
-  await page.evaluate(() => {
-    ;(window as unknown as { __failSpeech: boolean }).__failSpeech = true
-  })
-  await page.getByRole('button', { name: 'Repeat instruction' }).click()
-  await expect(page.locator('#navigation-panel')).toContainText('Walking guidance paused', {
-    timeout: 8000,
-  })
-  await page.evaluate(() => {
-    ;(window as unknown as { __failSpeech: boolean }).__failSpeech = false
-  })
-  await fix(page, 0, 0.0001)
-  await page.getByRole('button', { name: 'Test voice / retry' }).click()
-  await expect(page.locator('#navigation-panel')).toContainText('turn left')
 })
 
 test('off-route state suppresses the old instruction including Repeat', async ({ page }) => {
@@ -330,7 +294,7 @@ test('native radio groups work with arrow keys and the skip link focuses main', 
   await page.keyboard.press('Tab')
   await page.keyboard.press('Enter')
   await expect(page.locator('main')).toBeFocused()
-  await page.getByText('Display settings', { exact: true }).click()
+  await page.getByText('Settings', { exact: true }).click()
   await page.getByRole('radio', { name: 'Normal', exact: true }).focus()
   await page.keyboard.press('ArrowRight')
   await expect(page.getByRole('radio', { name: 'Large', exact: true })).toBeChecked()
@@ -377,9 +341,9 @@ test('guidance, paused state and SOS dialog pass automated accessibility in ligh
   await startRoute(page)
   for (const theme of ['Light', 'Dark']) {
     await fix(page, 0, 0.0001)
-    await page.getByText('Display settings', { exact: true }).click()
+    await page.getByText('Settings', { exact: true }).click()
     await page.getByRole('radio', { name: theme, exact: true }).check()
-    await page.getByText('Display settings', { exact: true }).click()
+    await page.getByText('Settings', { exact: true }).click()
     expect(
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
         .violations,

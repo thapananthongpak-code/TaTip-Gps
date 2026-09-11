@@ -1,7 +1,6 @@
 import i18n from 'i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
-import { speechService } from '@/services'
 import type { ServiceLanguage } from '@/types'
 import en from './locales/en.json'
 import th from './locales/th.json'
@@ -41,19 +40,16 @@ export function currentLanguage(): ServiceLanguage {
   return base.startsWith('en') ? 'en' : 'th'
 }
 
-// ให้เสียงพูดเปลี่ยนตามภาษาที่เลือกโดยอัตโนมัติ
-// ผูกไว้ที่นี่จุดเดียว จะได้ไม่ต้องจำว่าต้องเรียก setLanguage ทุกที่ที่สลับภาษา
+/**
+ * บอกภาษาของเอกสารให้โปรแกรมอ่านหน้าจอรู้
+ * สำคัญมากเพราะ VoiceOver เลือกเสียงอ่านจาก lang ของเนื้อหา
+ * ถ้าไม่ตั้ง ข้อความไทยจะถูกอ่านด้วยเสียงอังกฤษจนฟังไม่รู้เรื่อง
+ */
 function syncLanguage() {
-  speechService.setLanguage(currentLanguage())
   document.documentElement.lang = currentLanguage()
   document.title = i18n.t('app.title')
 }
 syncLanguage()
 i18n.on('languageChanged', syncLanguage)
-try {
-  speechService.setMode(localStorage.getItem('taathip.voice') === 'app' ? 'app' : 'reader')
-} catch {
-  /* Default to screen-reader announcements. */
-}
 
 export default i18n

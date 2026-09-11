@@ -14,7 +14,6 @@ const HAZARD_WARNING_DISTANCE_M = 35
 
 interface Options {
   enabled: boolean
-  vibrationEnabled: boolean
 }
 
 /**
@@ -27,7 +26,7 @@ interface Options {
  * คำเตือนนี้จึงเป็นการให้ "ระวังไว้ก่อน" ไม่ใช่การยืนยันว่าปลอดภัยที่จะข้าม
  */
 export function useHazardAlerts(nav: UseNavigationResult, options: Options) {
-  const { enabled, vibrationEnabled } = options
+  const { enabled } = options
   const { t } = useTranslation()
   const { speak } = useSpeech()
   const warnedStepRef = useRef<string | null>(null)
@@ -53,7 +52,7 @@ export function useHazardAlerts(nav: UseNavigationResult, options: Options) {
     if (warnedStepRef.current === key) return
     warnedStepRef.current = key
 
-    vibrate('hazard', vibrationEnabled)
+    vibrate('hazard')
     speak(
       step.hazard === 'crossroads'
         ? t('hazard.crossroadsSpoken')
@@ -70,6 +69,5 @@ export function useHazardAlerts(nav: UseNavigationResult, options: Options) {
     nav.isOffRoute,
     speak,
     t,
-    vibrationEnabled,
   ])
 }

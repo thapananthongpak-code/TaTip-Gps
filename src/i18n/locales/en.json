@@ -7,8 +7,7 @@
     "switchTo": "Switch to Thai",
     "switchToShort": "ไทย",
     "current": "Current language: English",
-    "switchedSpoken": "Switched to English",
-    "noVoiceSpoken": "No English voice is installed on this device. The closest available voice will be used. For clearer speech, install an English voice in your device settings."
+    "switchedSpoken": "Switched to English"
   },
   "permission": {
     "title": "This app needs your location",
@@ -218,12 +217,9 @@
     "removeContact": "Remove {{name}}",
     "sendToContact": "Send location to {{name}}",
     "send": "Send",
-    "alertsTitle": "Alerts",
-    "hazardAlerts": "Spoken hazard warnings",
-    "vibration": "Vibrate along with speech",
     "vibrationUnsupported": "This device does not support vibration (for example iPhone on Safari). Speech will be used on its own.",
     "clearData": "Delete saved settings",
-    "openSettings": "Safety settings",
+    "openSettings": "Settings",
     "closeSettings": "Close settings",
     "clearDataConfirm": "Confirm deletion",
     "clearDataConfirmSpoken": "Delete saved contacts and display settings? Choose Confirm deletion or Cancel. There is no time limit.",
@@ -266,22 +262,8 @@
     "skipToMain": "Skip to main controls",
     "mainLabel": "Main controls"
   },
-  "voice": {
-    "title": "Spoken guidance",
-    "reader": "Screen reader",
-    "app": "App voice",
-    "readerHint": "Guidance is announced by your screen reader. Choose this mode when VoiceOver or TalkBack is enabled to avoid two voices.",
-    "appHint": "Use this mode without a screen reader. Test your audio and volume before travelling.",
-    "test": "Test voice / retry",
-    "stop": "Stop current announcement",
-    "testMessage": "Taa-Thip audio test. Check that you can hear this clearly before travelling.",
-    "failed": "App speech failed to start or stopped unexpectedly. Stop somewhere safe. Check the installed voice language and volume, or use your screen reader. Test speech again before continuing.",
-    "last": "Latest message",
-    "ready": "Ready to test"
-  },
   "nearby": {
     "title": "Find nearby",
-    "hint": "Pick a category and the app finds what is around you, nearest first",
     "searching": "Searching nearby",
     "searchingSpoken": "Searching around you. This may take a moment.",
     "resultsSpoken_one": "Found {{count}} place within {{radius}}. Tap it to set it as your destination.",

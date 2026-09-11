@@ -46,14 +46,6 @@ export const localSettingsService: SettingsService = {
       return {
         fontScale: oneOf(data.fontScale, FONT_SCALES, DEFAULT_SETTINGS.fontScale),
         theme: oneOf(data.theme, THEMES, DEFAULT_SETTINGS.theme),
-        vibrationEnabled:
-          typeof data.vibrationEnabled === 'boolean'
-            ? data.vibrationEnabled
-            : DEFAULT_SETTINGS.vibrationEnabled,
-        hazardAlertsEnabled:
-          typeof data.hazardAlertsEnabled === 'boolean'
-            ? data.hazardAlertsEnabled
-            : DEFAULT_SETTINGS.hazardAlertsEnabled,
         emergencyContacts: parseContacts(data.emergencyContacts),
       }
     } catch {

@@ -5,11 +5,10 @@ import { vibrate } from '@/utils/vibration'
 interface Props {
   onTrigger: () => void
   disabled?: boolean
-  vibrationEnabled: boolean
 }
 
 /** Holding prepares a confirmation dialog; activation by assistive technology does too. */
-export function SosButton({ onTrigger, disabled = false, vibrationEnabled }: Props) {
+export function SosButton({ onTrigger, disabled = false }: Props) {
   const { t } = useTranslation()
   const [progress, setProgress] = useState(0)
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
@@ -24,7 +23,7 @@ export function SosButton({ onTrigger, disabled = false, vibrationEnabled }: Pro
     if (disabled || timer.current !== undefined) return
     triggered.current = false
     startTime.current = performance.now()
-    vibrate('tap', vibrationEnabled)
+    vibrate('tap')
     timer.current = setInterval(() => {
       const elapsed = performance.now() - startTime.current
       if (elapsed >= 3000) {

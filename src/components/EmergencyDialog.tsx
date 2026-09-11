@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EmergencyContact, GeoPosition } from '@/types'
-import { shareService, speechService } from '@/services'
+import { shareService } from '@/services'
 import { useSpeech } from '@/hooks/useSpeech'
 import { BigButton } from './BigButton'
 
@@ -16,7 +16,6 @@ export function EmergencyDialog({
 }) {
   const { t } = useTranslation()
   const { speak } = useSpeech()
-  const audio = useSyncExternalStore(speechService.subscribe, speechService.getSnapshot)
   const dialog = useRef<HTMLDialogElement>(null)
   const [result, setResult] = useState('')
   // Keep the reviewed message stable while the native share/SMS sheet is open.
@@ -60,7 +59,7 @@ export function EmergencyDialog({
           onClick={() => {
             shareService.openSms(contact.phone, message)
             setResult(t('sos.sendingSpoken'))
-            if (audio.mode === 'app' && !audio.failed) speak(t('sos.sendingSpoken'))
+            speak(t('sos.sendingSpoken'))
           }}
         >
           {t('settings.sendToContact', { name: contact.name })}
@@ -82,12 +81,12 @@ export function EmergencyDialog({
                 : 'share.notSent',
           )
           setResult(text)
-          if (audio.mode === 'app' && !audio.failed) speak(text)
+          speak(text)
         }}
       >
         {t('sos.shareAction')}
       </BigButton>
-      <p aria-live={audio.mode === 'reader' || audio.failed ? 'polite' : 'off'} aria-atomic="true">
+      <p aria-live="polite" aria-atomic="true">
         {result}
       </p>
       <BigButton variant="secondary" onClick={onClose}>

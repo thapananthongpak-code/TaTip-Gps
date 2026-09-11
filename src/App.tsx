@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Announcer } from '@/components/Announcer'
 import { AppearancePanel } from '@/components/AppearancePanel'
 import { BigButton } from '@/components/BigButton'
 import { EmergencyDialog } from '@/components/EmergencyDialog'
@@ -16,7 +17,6 @@ import { SearchPanel } from '@/components/SearchPanel'
 import { SharedLocationView } from '@/components/SharedLocationView'
 import { SosButton } from '@/components/SosButton'
 import { UpdatePrompt } from '@/components/UpdatePrompt'
-import { VoiceControls } from '@/components/VoiceControls'
 import { useAppearance } from '@/hooks/useAppearance'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { useGpsAnnouncer } from '@/hooks/useGpsAnnouncer'
@@ -50,8 +50,7 @@ export default function App() {
   const settings = useSettings()
   const shareRoute = useShareRoute()
   const geo = useGeolocation()
-  const audio = useSyncExternalStore(speechService.subscribe, speechService.getSnapshot)
-  const { speak, unlock, supported } = useSpeech()
+  const { speak } = useSpeech()
   const online = useOnlineStatus(started)
   useAppearance(settings.settings)
   useEffect(() => {
@@ -73,7 +72,7 @@ export default function App() {
     !geo.isStale &&
     geo.position.accuracy <= 30 &&
     now - geo.position.timestamp <= 15000
-  const usable = gpsUsable && visible && !audio.failed && !emergencyOpen
+  const usable = gpsUsable && visible && !emergencyOpen
   const nav = useNavigation(geo.position, usable)
   const active = nav.status !== 'idle' && nav.status !== 'arrived'
   const where = useWhereAmI(gpsUsable ? geo.position : null)
@@ -98,14 +97,12 @@ export default function App() {
     wasBlocked.current = blocked
   }, [active, usable, nav.isOffRoute, nav.isRecalculating, nav.status, speak, t])
   useGpsAnnouncer(geo, started && !active)
-  useNavigationAnnouncer(nav, started, audio.mode)
-  useHazardAlerts(nav, {
-    enabled: started && settings.settings.hazardAlertsEnabled,
-    vibrationEnabled: settings.settings.vibrationEnabled,
-  })
+  useNavigationAnnouncer(nav, started)
+  // คำเตือนจุดเสี่ยงและสิ่งกีดขวางเปิดเสมอ ไม่ทำเป็นตัวเลือกให้ปิด
+  // เพราะเป็นข้อมูลความปลอดภัย และการซ่อนไว้หลังสวิตช์ทำให้ผู้ใช้ใหม่ไม่รู้ว่ามี
+  useHazardAlerts(nav, { enabled: started })
   useObstacleAlerts(nav, obstacleScan.report.obstacles, nav.route, {
-    enabled: started && usable && settings.settings.hazardAlertsEnabled,
-    vibrationEnabled: settings.settings.vibrationEnabled,
+    enabled: started && usable,
   })
   const vibrated = useRef('')
   useEffect(() => {
@@ -119,12 +116,11 @@ export default function App() {
     const key = nav.route?.id + ':' + nav.progress.currentStepIndex
     if (key === vibrated.current) return
     vibrated.current = key
-    vibrate('maneuver', settings.settings.vibrationEnabled)
-  }, [nav.status, nav.progress, nav.route?.id, usable, settings.settings.vibrationEnabled])
+    vibrate('maneuver')
+  }, [nav.status, nav.progress, nav.route?.id, usable])
 
   const repeat = useCallback(() => {
     speechService.cancel()
-    unlock()
     if (active && !usable) {
       speak(t('nav.paused'), { priority: 'critical' })
       return
@@ -169,7 +165,6 @@ export default function App() {
     nav.progress,
     speak,
     t,
-    unlock,
   ])
 
   const chooseDestination = useCallback(
@@ -181,6 +176,24 @@ export default function App() {
     },
     [nav, nearby],
   )
+
+  /**
+   * ปุ่มเดียวตอบคำถามเดียวที่ผู้ใช้ถามจริงๆ ว่า "ตอนนี้ฉันอยู่ไหน"
+   *
+   * เดิมแยกเป็นสองปุ่มคนละที่: ปุ่มบอกที่อยู่ กับปุ่มบอกความแม่นยำ
+   * ซึ่งผู้ใช้ต้องจำว่าปุ่มไหนให้อะไร ทั้งที่ทั้งสองอย่างควรได้ยินพร้อมกันอยู่แล้ว
+   * เพราะที่อยู่จะเชื่อถือได้แค่ไหนขึ้นกับความแม่นยำในขณะนั้น
+   */
+  const announceLocation = useCallback(() => {
+    if (!gpsUsable) {
+      speak(t('nav.paused'), { priority: 'critical' })
+      return
+    }
+    speak(t('actions.statusSpoken', { meters: Math.round(geo.position!.accuracy) }), {
+      priority: 'critical',
+    })
+    void where.announce()
+  }, [gpsUsable, geo.position, speak, t, where])
 
   const openEmergency = () => {
     speechService.cancel()
@@ -213,12 +226,10 @@ export default function App() {
       </header>
       <UpdatePrompt busy={active} />
       {!online && <OfflineBanner />}
+      <Announcer />
       <main id="main-controls" tabIndex={-1}>
         <div className="emergency-access">
-          <SosButton
-            onTrigger={openEmergency}
-            vibrationEnabled={settings.settings.vibrationEnabled}
-          />
+          <SosButton onTrigger={openEmergency} />
         </div>
         {started && (
           <section className="primary-controls" aria-label={t('a11y.mainLabel')}>
@@ -235,28 +246,18 @@ export default function App() {
                 isOnline={online}
               />
             )}
-            <BigButton variant="secondary" onClick={where.announce} disabled={where.isLoading}>
+            <BigButton variant="secondary" onClick={announceLocation} disabled={where.isLoading}>
               {t('whereAmI.button')}
             </BigButton>
             {where.address && <p>{where.address}</p>}
-            {nav.route && settings.settings.hazardAlertsEnabled && (
+            {nav.route && (
               <ObstacleReport
                 report={obstacleScan.report}
                 isScanning={obstacleScan.isScanning}
                 announce={started}
               />
             )}
-            <GpsStatusPanel
-              geo={geo}
-              onRepeatStatus={() => {
-                unlock()
-                speak(
-                  !gpsUsable
-                    ? t('nav.paused')
-                    : t('actions.statusSpoken', { meters: Math.round(geo.position!.accuracy) }),
-                )
-              }}
-            />
+            <GpsStatusPanel geo={geo} />
           </section>
         )}
         {started && (
@@ -293,18 +294,16 @@ export default function App() {
             </div>
           </>
         )}
-        <VoiceControls />
         {!started && (
           <PermissionGate
-            speechSupported={supported}
             onStart={() => {
-              unlock()
               speak(t('gps.acquiringSpoken'))
               setStarted(true)
               geo.start()
             }}
           />
         )}
+        {/* ตั้งค่าทั้งหมดอยู่ในที่เดียว ผู้ใช้ไม่ต้องเดาว่าของที่ต้องการอยู่กล่องไหน */}
         <details className="settings-section">
           <summary>{t('settings.openSettings')}</summary>
           <SafetyPanel
@@ -319,9 +318,6 @@ export default function App() {
               onStop: share.stop,
             }}
           />
-        </details>
-        <details className="settings-section">
-          <summary>{t('appearance.openPanel')}</summary>
           <AppearancePanel settings={settings} />
         </details>
         <p className="safety-note">{t('nav.safetyNote')}</p>

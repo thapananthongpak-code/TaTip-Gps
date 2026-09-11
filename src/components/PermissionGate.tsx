@@ -3,7 +3,6 @@ import { BigButton } from './BigButton'
 
 interface Props {
   onStart: () => void
-  speechSupported: boolean
 }
 
 /**
@@ -13,7 +12,7 @@ interface Props {
  * 1) ผู้ใช้ควรรู้ก่อนว่าทำไมแอปต้องใช้ตำแหน่ง (ความโปร่งใส/PDPA)
  * 2) iOS ต้องมี user gesture ก่อนถึงจะยอมให้เล่นเสียงพูดได้
  */
-export function PermissionGate({ onStart, speechSupported }: Props) {
+export function PermissionGate({ onStart }: Props) {
   const { t } = useTranslation()
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 text-center">
@@ -28,12 +27,6 @@ export function PermissionGate({ onStart, speechSupported }: Props) {
       <p id="start-hint" className="text-base text-slate-600 dark:text-slate-300">
         {t('permission.startButtonHint')}
       </p>
-
-      {!speechSupported && (
-        <p className="max-w-md rounded-xl bg-amber-100 p-4 text-base text-amber-950">
-          {t('errors.speechUnsupported')}
-        </p>
-      )}
     </div>
   )
 }

@@ -64,8 +64,8 @@ export function NearbyPlaces({ nearby, position, onSelect, isOnline }: Props) {
 
   return (
     <section aria-label={t('nearby.title')} className="nearby-panel">
+      {/* ไม่มีคำอธิบายใต้หัวข้อ เพราะป้ายบนปุ่มบอกอยู่แล้วว่าแต่ละหมวดคืออะไร */}
       <h2>{t('nearby.title')}</h2>
-      <p className="hint">{t('nearby.hint')}</p>
 
       <div className="category-grid">
         {CATEGORIES.map((category) => (

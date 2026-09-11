@@ -1,41 +1,31 @@
-import type { ServiceLanguage } from '@/types'
-
 export type SpeechPriority = 'low' | 'normal' | 'critical'
-export type SpeechMode = 'reader' | 'app'
+
 export interface SpeechSnapshot {
-  mode: SpeechMode
+  /** ข้อความล่าสุดที่ประกาศออกไป */
   text: string
+  /** เพิ่มขึ้นทุกครั้งที่มีข้อความใหม่ ใช้บังคับให้ live region อ่านซ้ำแม้ข้อความเดิม */
   sequence: number
-  failed: boolean
+  /** true เมื่อยังมีข้อความค้างอยู่ในคิว */
   speaking: boolean
 }
 
 export interface SpeakOptions {
-  /** Critical replaces ordinary queued speech, but does not cut another critical warning. */
+  /** critical แทนที่คิวปกติได้ แต่ไม่ตัดคำเตือน critical ที่กำลังประกาศอยู่ */
   priority?: SpeechPriority
-  language?: ServiceLanguage
-  rate?: number
   group?: string
 }
 
-/** ครอบ Web Speech API (SpeechSynthesis) — แยกไว้เพื่อ mock ในเทสต์ได้ */
+/**
+ * ช่องทางเดียวที่แอปใช้ "พูด" กับผู้ใช้
+ *
+ * implementation ปัจจุบันประกาศผ่าน live region ให้โปรแกรมอ่านหน้าจอเป็นผู้อ่าน
+ * ไม่สังเคราะห์เสียงเอง เพราะถ้าทั้งแอปและ VoiceOver พูดพร้อมกัน ผู้ใช้จะได้ยินสองเสียงทับกัน
+ * และเว็บไม่มี API ที่บอกได้ว่าโปรแกรมอ่านหน้าจอกำลังพูดอยู่หรืออ่านจบแล้ว
+ * จึงประสานจังหวะระหว่างสองระบบไม่ได้เลย
+ */
 export interface SpeechService {
   subscribe(listener: () => void): () => void
   getSnapshot(): SpeechSnapshot
-  setMode(mode: SpeechMode): void
-  isSupported(): boolean
-  /**
-   * เปิดสิทธิ์ให้พูดได้ ต้องเรียกจาก user gesture หนึ่งครั้งตอนเริ่มใช้แอป
-   * (iOS/Safari บล็อกเสียงที่ไม่ได้เกิดจากการแตะของผู้ใช้)
-   */
-  unlock(): void
   speak(text: string, options?: SpeakOptions): void
-  /**
-   * มีเสียงพูดของภาษานี้ติดตั้งอยู่ในอุปกรณ์หรือไม่
-   * เครื่องที่ไม่มีเสียงภาษาไทยจะอ่านภาษาไทยด้วยเสียงภาษาอื่น ซึ่งฟังแทบไม่รู้เรื่อง
-   * ต้องบอกผู้ใช้ให้รู้ตัว ไม่ใช่ปล่อยให้งงว่าทำไมฟังไม่ออก
-   */
-  hasVoiceFor(language: ServiceLanguage): boolean
   cancel(): void
-  setLanguage(language: ServiceLanguage): void
 }

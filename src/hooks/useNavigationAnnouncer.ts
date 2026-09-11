@@ -38,11 +38,7 @@ function instructionFor(t: TFunction, step: RouteStep, distance: number): string
  * - เรื่องที่กระทบความปลอดภัย (ออกนอกเส้นทาง / ระบบล่ม / ใกล้ถึงจุดเลี้ยวแล้ว) ใช้ priority critical
  *   เพื่อตัดคิวข้อความที่ไม่เร่งด่วนที่ค้างอยู่
  */
-export function useNavigationAnnouncer(
-  nav: UseNavigationResult,
-  enabled: boolean,
-  outputMode = 'reader',
-) {
+export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolean) {
   const { t } = useTranslation()
   const { speak } = useSpeech()
 
@@ -58,7 +54,7 @@ export function useNavigationAnnouncer(
   useEffect(() => {
     announcedStepRef.current = -1
     announcedThresholdsRef.current.clear()
-  }, [enabled, nav.suspended, nav.isRecalculating, nav.isOffRoute, outputMode, t])
+  }, [enabled, nav.suspended, nav.isRecalculating, nav.isOffRoute, t])
 
   // 1) เริ่มคำนวณเส้นทาง
   useEffect(() => {
@@ -143,7 +139,6 @@ export function useNavigationAnnouncer(
     nav.suspended,
     nav.isRecalculating,
     nav.isOffRoute,
-    outputMode,
     speak,
     t,
   ])
