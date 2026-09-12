@@ -1,12 +1,20 @@
+import type { ServiceLanguage } from '@/types'
+
 export type SpeechPriority = 'low' | 'normal' | 'critical'
 
 export interface SpeechSnapshot {
-  /** ข้อความล่าสุดที่ประกาศออกไป */
+  /** ข้อความล่าสุด — ใส่ค่าเฉพาะตอนที่ต้องให้โปรแกรมอ่านหน้าจออ่านแทน */
   text: string
   /** เพิ่มขึ้นทุกครั้งที่มีข้อความใหม่ ใช้บังคับให้ live region อ่านซ้ำแม้ข้อความเดิม */
   sequence: number
-  /** true เมื่อยังมีข้อความค้างอยู่ในคิว */
   speaking: boolean
+  /**
+   * true = แอปพูดเองไม่ได้ กำลังให้โปรแกรมอ่านหน้าจออ่านแทน
+   *
+   * ต้องแยกสองสถานะนี้ให้ขาด เพราะถ้าแอปพูดอยู่แล้วยังใส่ข้อความลง live region ด้วย
+   * ผู้ใช้จะได้ยินสองเสียงอ่านข้อความเดียวกันทับกันจนจับใจความไม่ได้
+   */
+  usingScreenReader: boolean
 }
 
 export interface SpeakOptions {
@@ -16,16 +24,17 @@ export interface SpeakOptions {
 }
 
 /**
- * ช่องทางเดียวที่แอปใช้ "พูด" กับผู้ใช้
+ * ช่องทางที่แอปใช้ "พูด" กับผู้ใช้
  *
- * implementation ปัจจุบันประกาศผ่าน live region ให้โปรแกรมอ่านหน้าจอเป็นผู้อ่าน
- * ไม่สังเคราะห์เสียงเอง เพราะถ้าทั้งแอปและ VoiceOver พูดพร้อมกัน ผู้ใช้จะได้ยินสองเสียงทับกัน
- * และเว็บไม่มี API ที่บอกได้ว่าโปรแกรมอ่านหน้าจอกำลังพูดอยู่หรืออ่านจบแล้ว
- * จึงประสานจังหวะระหว่างสองระบบไม่ได้เลย
+ * พยายามพูดด้วยเสียงของแอปเองก่อนเสมอ และถอยไปให้โปรแกรมอ่านหน้าจออ่านแทน
+ * เมื่อพูดเองไม่ได้จริงๆ การสลับเกิดขึ้นเอง ไม่มีตัวเลือกให้ผู้ใช้ตั้งค่า
  */
 export interface SpeechService {
   subscribe(listener: () => void): () => void
   getSnapshot(): SpeechSnapshot
   speak(text: string, options?: SpeakOptions): void
   cancel(): void
+  setLanguage(language: ServiceLanguage): void
+  /** ต้องเรียกจาก user gesture หนึ่งครั้ง ไม่งั้น iOS จะไม่ยอมให้แอปออกเสียงเลย */
+  unlock(): void
 }

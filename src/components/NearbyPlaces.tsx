@@ -6,7 +6,6 @@ import { mapService } from '@/services'
 import type { GeoPosition, Place, PlaceCategory } from '@/types'
 import { formatDistance } from '@/utils/format'
 import { placeLabel } from '@/utils/places'
-import { BigButton } from './BigButton'
 
 /** เรียงตามความถี่ที่คนตาบอดต้องใช้จริง หมวดที่ใช้บ่อยที่สุดอยู่บนสุด */
 const CATEGORIES: PlaceCategory[] = [
@@ -100,12 +99,6 @@ export function NearbyPlaces({ nearby, position, onSelect, isOnline }: Props) {
           nearby.places.length > 0 &&
           t('nearby.radiusLabel', { radius: formatDistance(nearby.radiusM) })}
       </p>
-
-      {!nearby.isLoading && nearby.isEmpty && (
-        <BigButton variant="secondary" onClick={nearby.widen}>
-          {t('nearby.widen')}
-        </BigButton>
-      )}
 
       {nearby.places.length > 0 && (
         <ul aria-label={t('search.resultsLabel')} className="result-list">

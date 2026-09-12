@@ -2,16 +2,13 @@ import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSpeech } from './useSpeech'
 import { settingsService } from '@/services'
-import type { AppSettings, EmergencyContact, FontScale, ThemePreference } from '@/types'
+import type { AppSettings, FontScale, ThemePreference } from '@/types'
 
 export interface UseSettingsResult {
   settings: AppSettings
   storageFailed: boolean
   setFontScale: (scale: FontScale) => void
-  setTheme: (theme: ThemePreference) => void
-  addContact: (name: string, phone: string) => void
-  removeContact: (id: string) => void
-  /** ลบข้อมูลทั้งหมดที่แอปเก็บไว้บนเครื่อง */
+  setTheme: (theme: ThemePreference) => void /** ลบข้อมูลทั้งหมดที่แอปเก็บไว้บนเครื่อง */
   clearAll: () => boolean
 }
 
@@ -45,33 +42,6 @@ export function useSettings(): UseSettingsResult {
     [settings, update],
   )
 
-  const addContact = useCallback(
-    (name: string, phone: string) => {
-      if (
-        !name.trim() ||
-        name.length > 80 ||
-        !/^[+]?[0-9]{6,15}$/.test(phone.replace(/[ ()-]/g, ''))
-      )
-        return
-      const contact: EmergencyContact = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        phone: phone.trim(),
-      }
-      update({ ...settings, emergencyContacts: [...settings.emergencyContacts, contact] })
-    },
-    [settings, update],
-  )
-
-  const removeContact = useCallback(
-    (id: string) =>
-      update({
-        ...settings,
-        emergencyContacts: settings.emergencyContacts.filter((c) => c.id !== id),
-      }),
-    [settings, update],
-  )
-
   const clearAll = useCallback(() => {
     const cleared = settingsService.clear()
     setStorageFailed(!cleared)
@@ -88,8 +58,6 @@ export function useSettings(): UseSettingsResult {
     storageFailed,
     setFontScale,
     setTheme,
-    addContact,
-    removeContact,
     clearAll,
   }
 }

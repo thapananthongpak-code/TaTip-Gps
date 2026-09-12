@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { speechService } from '@/services'
 
 /**
- * live region กลางของทั้งแอป
+ * live region กลางของทั้งแอป — มีข้อความอยู่ข้างในเฉพาะตอนที่แอปพูดเองไม่ได้
  *
  * ต้องมีจุดเดียวและต้องถูก mount ไว้ตลอด ไม่ใช่โผล่มาตอนมีข้อความ
  * เพราะโปรแกรมอ่านหน้าจอจะประกาศเฉพาะการเปลี่ยนแปลงใน live region ที่มีอยู่ก่อนแล้ว
@@ -16,7 +16,11 @@ export function Announcer() {
 
   return (
     <div className="sr-only" aria-live="polite" aria-atomic="true" data-testid="announcer">
-      <span key={state.sequence}>{state.text}</span>
+      {/*
+        ปล่อยว่างไว้ขณะที่แอปพูดเอง ไม่งั้นโปรแกรมอ่านหน้าจอจะอ่านประโยคเดียวกัน
+        ซ้อนขึ้นมาอีกเสียงพร้อมกัน จนผู้ใช้จับใจความไม่ได้
+      */}
+      <span key={state.sequence}>{state.usingScreenReader ? state.text : ''}</span>
     </div>
   )
 }

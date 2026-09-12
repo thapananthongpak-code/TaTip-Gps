@@ -5,9 +5,8 @@ import type { SpeakOptions } from '@/services/interfaces'
 /**
  * ครอบ speechService ให้ใช้ใน component ได้สะดวก
  *
- * ข้อความถูกประกาศผ่าน live region ให้โปรแกรมอ่านหน้าจอเป็นผู้อ่าน
- * จึงไม่ต้องบอกภาษาหรือปลดล็อกเสียงเหมือนตอนที่แอปสังเคราะห์เสียงเอง
- * เพราะโปรแกรมอ่านหน้าจออ่านตามภาษาของเนื้อหาบนหน้าอยู่แล้ว
+ * แอปพยายามพูดด้วยเสียงของตัวเองก่อน แล้วถอยไปให้โปรแกรมอ่านหน้าจออ่านแทนถ้าพูดไม่ได้
+ * ผู้เรียกไม่ต้องรู้ว่ากำลังใช้ทางไหนอยู่
  */
 export function useSpeech() {
   const speak = useCallback((text: string, options?: SpeakOptions) => {
@@ -16,5 +15,8 @@ export function useSpeech() {
 
   const cancel = useCallback(() => speechService.cancel(), [])
 
-  return { speak, cancel }
+  /** ต้องเรียกจาก user gesture หนึ่งครั้ง ไม่งั้น iOS จะไม่ยอมให้แอปออกเสียง */
+  const unlock = useCallback(() => speechService.unlock(), [])
+
+  return { speak, cancel, unlock }
 }

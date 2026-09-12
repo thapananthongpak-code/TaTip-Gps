@@ -14,12 +14,19 @@ export interface UseNearbyPlacesResult {
   isEmpty: boolean
   radiusM: number
   find: (category: PlaceCategory) => void
-  /** ขยายรัศมีแล้วค้นหมวดเดิมอีกครั้ง */
-  widen: () => void
   clear: () => void
 }
 
-/** ขยายรัศมีทีละขั้นเมื่อไม่เจออะไรเลย — สูงสุด 2 กิโลเมตรพอสำหรับคนเดิน */
+/**
+ * ขยายรัศมีทีละขั้นเองเมื่อไม่เจออะไรเลย
+ *
+ * จำเป็นเพราะข้อมูล OSM ในไทยนอกใจกลางเมืองบางมาก วัดจริงในรัศมี 800 เมตร:
+ * ย่านสยามเจอร้านสะดวกซื้อ 30 แห่ง แต่แถวสายไหมกับบางนาเจอแค่ 5-6 แห่ง
+ * และบางหมวด (ร้านขายยา โรงพยาบาล ห้องน้ำ) เจอศูนย์แห่ง
+ *
+ * เดิมให้ผู้ใช้กดปุ่ม "ขยายรัศมี" เอง ซึ่งแปลว่าต้องเจอหน้าจอ "ไม่พบ" ก่อนถึงจะรู้ว่ามีปุ่มนั้น
+ * ตอนนี้ขยายให้เองจนสุด แล้วค่อยบอกว่าไม่พบจริงๆ
+ */
 const RADIUS_STEPS_M = [NEARBY_RADIUS_M, 1500, 2500]
 
 /**
@@ -42,7 +49,7 @@ export function useNearbyPlaces(center: LatLng | null): UseNearbyPlacesResult {
     centerRef.current = center
   }, [center])
 
-  const run = useCallback(async (target: PlaceCategory, stepIndex: number) => {
+  const find = useCallback((target: PlaceCategory) => {
     const origin = centerRef.current
     if (!origin) return
 
@@ -51,35 +58,40 @@ export function useNearbyPlaces(center: LatLng | null): UseNearbyPlacesResult {
     controller.current = request
 
     setCategory(target)
-    setRadiusIndex(stepIndex)
+    setRadiusIndex(0)
     setIsLoading(true)
     setError(null)
     setIsEmpty(false)
     setPlaces([])
 
-    try {
-      const found = await placesService.findNearby(target, origin, {
-        radiusM: RADIUS_STEPS_M[stepIndex],
-        language: currentLanguage(),
-        signal: request.signal,
-      })
-      if (request.signal.aborted) return
-      setPlaces(found)
-      setIsEmpty(found.length === 0)
-    } catch (err) {
-      if (request.signal.aborted) return
-      setError(err instanceof ServiceError ? err : new ServiceError('UNKNOWN'))
-    } finally {
-      if (!request.signal.aborted) setIsLoading(false)
-    }
+    void (async () => {
+      try {
+        // ไล่ขยายรัศมีจนกว่าจะเจอ หรือจนสุดขั้นแล้วยังไม่เจอจริงๆ
+        for (const [index, radiusM] of RADIUS_STEPS_M.entries()) {
+          if (request.signal.aborted) return
+          setRadiusIndex(index)
+
+          const found = await placesService.findNearby(target, origin, {
+            radiusM,
+            language: currentLanguage(),
+            signal: request.signal,
+          })
+          if (request.signal.aborted) return
+
+          if (found.length > 0) {
+            setPlaces(found)
+            return
+          }
+        }
+        setIsEmpty(true)
+      } catch (err) {
+        if (request.signal.aborted) return
+        setError(err instanceof ServiceError ? err : new ServiceError('UNKNOWN'))
+      } finally {
+        if (!request.signal.aborted) setIsLoading(false)
+      }
+    })()
   }, [])
-
-  const find = useCallback((target: PlaceCategory) => void run(target, 0), [run])
-
-  const widen = useCallback(() => {
-    if (!category || radiusIndex >= RADIUS_STEPS_M.length - 1) return
-    void run(category, radiusIndex + 1)
-  }, [category, radiusIndex, run])
 
   const clear = useCallback(() => {
     controller.current?.abort()
@@ -101,7 +113,6 @@ export function useNearbyPlaces(center: LatLng | null): UseNearbyPlacesResult {
     isEmpty,
     radiusM: RADIUS_STEPS_M[radiusIndex],
     find,
-    widen,
     clear,
   }
 }

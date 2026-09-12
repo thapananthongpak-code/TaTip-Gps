@@ -4,8 +4,7 @@ import { osmMapService } from './impl/osmMapService'
 import { osrmRoutingService } from './impl/osrmRoutingService'
 import { overpassObstacleService } from './impl/overpassObstacleService'
 import { overpassPlacesService } from './impl/overpassPlacesService'
-import { webShareService } from './impl/webShareService'
-import { screenReaderAnnouncer } from './impl/screenReaderAnnouncer'
+import { appSpeechService } from './impl/appSpeechService'
 import type {
   GeocodingService,
   MapService,
@@ -13,7 +12,6 @@ import type {
   PlacesService,
   RoutingService,
   SettingsService,
-  ShareService,
   SpeechService,
 } from './interfaces'
 
@@ -25,17 +23,13 @@ import type {
 export const mapService: MapService = osmMapService
 
 /**
- * แอปประกาศผ่านโปรแกรมอ่านหน้าจออย่างเดียว ไม่สังเคราะห์เสียงเอง
- * ถ้าวันหนึ่งต้องรองรับผู้ใช้ที่ไม่ได้เปิดโปรแกรมอ่านหน้าจอ ให้เขียน implementation ใหม่
- * ที่ใช้ SpeechSynthesis แล้วสลับที่บรรทัดนี้ — ส่วนอื่นของแอปไม่ต้องแก้
+ * แอปพูดด้วยเสียงของตัวเองก่อน และถอยไปให้โปรแกรมอ่านหน้าจออ่านแทนเมื่อพูดเองไม่ได้
+ * สลับกันเองอัตโนมัติ ไม่มีตัวเลือกให้ผู้ใช้ตั้งค่า
  */
-export const speechService: SpeechService = screenReaderAnnouncer
+export const speechService: SpeechService = appSpeechService
 
 /** เก็บค่าตั้งค่าบนเครื่องผู้ใช้เท่านั้น */
 export const settingsService: SettingsService = localSettingsService
-
-/** แชร์ตำแหน่งผ่านความสามารถของเบราว์เซอร์ ไม่ผ่านเซิร์ฟเวอร์ของแอป */
-export const shareService: ShareService = webShareService
 
 /** สลับไป Google Places ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
 export const geocodingService: GeocodingService = nominatimGeocodingService
@@ -56,7 +50,6 @@ export type {
   PlacesService,
   RoutingService,
   SettingsService,
-  ShareService,
   SpeechService,
 }
 export * from './config'

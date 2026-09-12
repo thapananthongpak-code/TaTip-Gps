@@ -4,14 +4,16 @@ import AxeBuilder from '@axe-core/playwright'
 type OverpassMock = { places: unknown[]; obstacles: unknown[] } | 'fail'
 
 async function setup(page: Page, options: { denial?: boolean; overpass?: OverpassMock } = {}) {
-  await page.addInitScript(({ denial }) => {
+  await page.addInitScript(({ denial, speechFails }) => {
     if (!localStorage.getItem('taathip.language')) localStorage.setItem('taathip.language', 'en')
     type TestWindow = Window & {
       __fix: (lat: number, lng: number, accuracy?: number) => void
       __said: string[]
+      __failSpeech: boolean
     }
     const target = window as unknown as TestWindow
     target.__said = []
+    target.__failSpeech = !!speechFails
     let success: PositionCallback | null = null
     target.__fix = (lat, lng, accuracy = 5) =>
       success?.({
@@ -57,8 +59,12 @@ async function setup(page: Page, options: { denial?: boolean; overpass?: Overpas
     Object.defineProperty(window, 'speechSynthesis', {
       value: {
         speak(u: FakeSpeech) {
-          // บันทึกไว้เพื่อพิสูจน์ว่าแอปไม่เคยเรียก ไม่ใช่เพื่อจำลองการพูด
           target.__said.push(u.text)
+          // เครื่องที่เงียบไปเฉยๆ จะไม่ยิง onstart เลย ซึ่งเกิดขึ้นจริงบน iOS ที่ยังไม่ปลดล็อก
+          if (!target.__failSpeech) {
+            setTimeout(() => u.onstart?.(), 0)
+            setTimeout(() => u.onend?.(), 60)
+          }
         },
         cancel() {},
         resume() {},
@@ -160,6 +166,10 @@ async function setup(page: Page, options: { denial?: boolean; overpass?: Overpas
   })
   await page.goto('/')
 }
+/** ทุกข้อความที่แอปพูดออกไปด้วยเสียงของตัวเอง */
+async function spoken(page: Page): Promise<string> {
+  return (await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).join(' | ')
+}
 async function fix(page: Page, lat: number, lng: number, accuracy = 5) {
   await page.evaluate(
     ({ lat, lng, accuracy }) => {
@@ -181,17 +191,35 @@ async function startRoute(page: Page) {
   await expect(page.locator('#navigation-panel')).toContainText('turn left')
 }
 
-test('announcements go through one polite live region and the app never synthesizes speech', async ({
+test('the app speaks with its own voice and leaves the live region empty so nothing is read twice', async ({
   page,
 }) => {
   await setup(page)
   await startRoute(page)
-  // แอปประกาศผ่านโปรแกรมอ่านหน้าจออย่างเดียว ห้ามเรียก SpeechSynthesis เองแม้ครั้งเดียว
-  expect(await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).toEqual([])
   await fix(page, 0, 0.00087)
   await expect(page.locator('#navigation-panel')).toContainText('turn left')
+
+  // แอปต้องพูดเอง ไม่ใช่เงียบ
+  const said = await page.evaluate(() => (window as unknown as { __said: string[] }).__said)
+  expect(said.join(' ')).toContain('turn left')
+
+  // และ live region ต้องว่าง ไม่งั้น VoiceOver จะอ่านประโยคเดียวกันทับเสียงแอป
+  await expect(page.getByTestId('announcer')).toHaveText('')
   await expect(page.locator('[aria-live="assertive"]')).toHaveCount(0)
   await expect(page.locator('[aria-live="polite"]')).toHaveCount(1)
+})
+
+test('a silent speech engine falls back to the screen reader instead of losing the message', async ({
+  page,
+}) => {
+  await setup(page, { speechFails: true })
+  await startRoute(page)
+
+  // แอปต้องลองพูดเองก่อน
+  expect(await spoken(page)).not.toBe('')
+  // แต่เมื่อเครื่องยนต์เสียงไม่เริ่มพูด ข้อความต้องไม่หายไปเฉยๆ
+  // ต้องย้ายไปอยู่ใน live region ให้โปรแกรมอ่านหน้าจออ่านแทน
+  await expect(page.getByTestId('announcer')).not.toBeEmpty({ timeout: 10000 })
 })
 test('navigation pauses for poor GPS and suppresses walking instructions', async ({ page }) => {
   await setup(page)
@@ -202,7 +230,7 @@ test('navigation pauses for poor GPS and suppresses walking instructions', async
   await fix(page, 0, 0.0009, 5)
   await expect(page.locator('#navigation-panel')).toContainText('turn left')
 })
-test('SOS remains usable with denied GPS; dialog supports keyboard and sends nothing on open', async ({
+test('denied GPS is stated plainly and offers a retry instead of failing silently', async ({
   page,
 }) => {
   await setup(page, { denial: true })
@@ -210,13 +238,7 @@ test('SOS remains usable with denied GPS; dialog supports keyboard and sends not
   await expect(
     page.getByText('Location access was denied, so the app cannot guide you'),
   ).toBeVisible()
-  const sos = page.getByRole('button', { name: /^Request help/ })
-  await sos.click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByLabel('Help request message')).toHaveValue(/cannot find my location/)
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog')).not.toBeVisible()
-  await expect(sos).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeVisible()
 })
 test('no autocomplete requests before explicit submission; clears stale results on edit', async ({
   page,
@@ -274,7 +296,7 @@ test('off-route state suppresses the old instruction including Repeat', async ({
   await fix(page, 0.0101, 0.01)
   await expect(page.locator('#navigation-panel')).not.toContainText('turn left')
   await page.getByRole('button', { name: 'Repeat instruction' }).click()
-  await expect(page.getByTestId('announcer')).toContainText('off the route')
+  expect(await spoken(page)).toContain('off the route')
 })
 
 test('missing GPS updates pause navigation without any browser error callback', async ({
@@ -316,9 +338,7 @@ test('routing outage retries with backoff then announces failure without a drivi
   await expect(page.locator('#navigation-panel')).toContainText('The map service is unavailable', {
     timeout: 12000,
   })
-  await expect(page.getByTestId('announcer')).toContainText('stop somewhere safe', {
-    timeout: 12000,
-  })
+  await expect.poll(() => spoken(page), { timeout: 12000 }).toContain('stop somewhere safe')
   expect(requests).toHaveLength(3)
   expect(requests.every((url) => url.includes('/routed-foot/'))).toBe(true)
   await expect(page.locator('#navigation-panel')).not.toContainText('turn left')
@@ -331,10 +351,10 @@ test('stopping guidance restores focus to search and announces the stopped state
   await startRoute(page)
   await page.getByRole('button', { name: 'Stop navigation' }).click()
   await expect(page.getByRole('searchbox')).toBeFocused()
-  await expect(page.getByTestId('announcer')).toContainText('Navigation stopped')
+  await expect.poll(() => spoken(page)).toContain('Navigation stopped')
 })
 
-test('guidance, paused state and SOS dialog pass automated accessibility in light and dark themes', async ({
+test('guidance and paused state pass automated accessibility in light and dark themes', async ({
   page,
 }) => {
   await setup(page)
@@ -354,12 +374,6 @@ test('guidance, paused state and SOS dialog pass automated accessibility in ligh
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
         .violations,
     ).toEqual([])
-    await page.getByRole('button', { name: /^Request help/ }).click()
-    expect(
-      (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
-        .violations,
-    ).toEqual([])
-    await page.keyboard.press('Escape')
   }
 })
 
@@ -419,7 +433,9 @@ test('obstacle report separates a failed scan from a genuinely clear route', asy
       .getByText('Could not check for obstacles', { exact: true }),
   ).toBeVisible()
   // ต้องประกาศออกไปด้วย ไม่ใช่แค่ขึ้นบนจอ เพราะผู้ใช้ที่มองไม่เห็นจะไม่รู้เลย
-  await expect(page.getByTestId('announcer')).toContainText('does not mean the route is clear')
+  await expect
+    .poll(() => spoken(page), { timeout: 10000 })
+    .toContain('does not mean the route is clear')
 })
 
 test('obstacle report lists steps found on the route with detail that matters before stepping', async ({

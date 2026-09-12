@@ -1,6 +1,7 @@
 import i18n from 'i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
+import { speechService } from '@/services'
 import type { ServiceLanguage } from '@/types'
 import en from './locales/en.json'
 import th from './locales/th.json'
@@ -48,6 +49,8 @@ export function currentLanguage(): ServiceLanguage {
 function syncLanguage() {
   document.documentElement.lang = currentLanguage()
   document.title = i18n.t('app.title')
+  // เสียงของแอปต้องเปลี่ยนตามภาษาด้วย ผูกไว้จุดเดียวที่นี่
+  speechService.setLanguage(currentLanguage())
 }
 syncLanguage()
 i18n.on('languageChanged', syncLanguage)

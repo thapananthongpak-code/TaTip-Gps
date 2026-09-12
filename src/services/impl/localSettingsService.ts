@@ -1,6 +1,6 @@
 import type { SettingsService } from '@/services/interfaces'
 import { DEFAULT_SETTINGS } from '@/types'
-import type { AppSettings, EmergencyContact, FontScale, ThemePreference } from '@/types'
+import type { AppSettings, FontScale, ThemePreference } from '@/types'
 
 const STORAGE_KEY = 'taathip.settings'
 
@@ -14,23 +14,10 @@ function oneOf<T extends string>(value: unknown, allowed: T[], fallback: T): T {
     : fallback
 }
 
-/** ตรวจรูปร่างข้อมูลที่อ่านมาจาก localStorage ก่อนใช้ กันข้อมูลเก่า/เสียหายทำแอปพัง */
-function parseContacts(value: unknown): EmergencyContact[] {
-  if (!Array.isArray(value)) return []
-  return value.flatMap((item): EmergencyContact[] => {
-    if (typeof item !== 'object' || item === null) return []
-    const { id, name, phone } = item as Record<string, unknown>
-    if (typeof id !== 'string' || typeof name !== 'string' || typeof phone !== 'string') return []
-    if (!name.trim() || name.length > 80 || !/^[+]?[0-9]{6,15}$/.test(phone.replace(/[ ()-]/g, '')))
-      return []
-    return [{ id, name, phone }]
-  })
-}
-
 /**
  * เก็บค่าตั้งค่าใน localStorage ของเครื่องผู้ใช้
  *
- * ข้อมูลทั้งหมดในนี้ รวมถึงเบอร์ผู้ติดต่อฉุกเฉิน อยู่บนเครื่องผู้ใช้เท่านั้น
+ * ข้อมูลทั้งหมดในนี้อยู่บนเครื่องผู้ใช้เท่านั้น
  * ไม่มีโค้ดส่วนใดของแอปส่งข้อมูลนี้ออกไปยังเซิร์ฟเวอร์ใดๆ (ดูหัวข้อความเป็นส่วนตัวใน README)
  */
 export const localSettingsService: SettingsService = {
@@ -46,7 +33,6 @@ export const localSettingsService: SettingsService = {
       return {
         fontScale: oneOf(data.fontScale, FONT_SCALES, DEFAULT_SETTINGS.fontScale),
         theme: oneOf(data.theme, THEMES, DEFAULT_SETTINGS.theme),
-        emergencyContacts: parseContacts(data.emergencyContacts),
       }
     } catch {
       // localStorage ถูกปิด (โหมดส่วนตัวบางเบราว์เซอร์) หรือข้อมูลเสีย — ใช้ค่าเริ่มต้นแทน
