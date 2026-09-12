@@ -9,7 +9,7 @@ export interface FetchJsonOptions {
   retries?: number
   onRetry?: (attempt: number, delayMs: number, error: ServiceError) => void
   /** Schedule EVERY network attempt, including retries, through the provider queue. */
-  schedule?: <T>(task: () => Promise<T>) => Promise<T>
+  schedule?: <T>(task: () => Promise<T>, signal?: AbortSignal) => Promise<T>
 }
 export function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -95,7 +95,7 @@ export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}):
           clearTimeout(timer)
           signal?.removeEventListener('abort', abort)
         }
-      })
+      }, signal)
     } catch (cause) {
       const error =
         cause instanceof ServiceError ? cause : new ServiceError('NETWORK', undefined, { cause })

@@ -68,7 +68,7 @@ export function ObstacleReport({ report, isScanning, announce }: Props) {
   }
 
   return (
-    <section aria-label={t('obstacle.title')} className="obstacle-panel">
+    <section aria-label={t('obstacle.title')} className="panel">
       <h2>{t('obstacle.title')}</h2>
 
       {/*

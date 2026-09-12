@@ -1,47 +1,28 @@
 import { useEffect } from 'react'
-import type { AppSettings, FontScale } from '@/types'
 
 /**
- * ขนาดตัวอักษรฐานของแต่ละระดับ
+ * ทำให้ธีมของหน้าเว็บตามการตั้งค่าของเครื่อง
  *
- * ทุกขนาดในแอปเขียนด้วยหน่วย rem การเปลี่ยนค่าฐานตรงนี้จึงขยายทั้งแอปพร้อมกัน
- * รวมถึงระยะห่างและขนาดปุ่ม ทำให้ยังกดถูกอยู่เมื่อขยายตัวอักษร
- */
-const FONT_SIZES: Record<FontScale, string> = {
-  normal: '18px',
-  large: '21px',
-  'x-large': '25px',
-}
-
-/**
- * ใช้ค่าหน้าตาที่ผู้ใช้เลือก (ขนาดตัวอักษร + ธีม) กับเอกสารทั้งหน้า
+ * ไม่มีตัวเลือกให้ผู้ใช้ตั้งเองแล้ว เพราะทุกตัวเลือกคือสิ่งที่ต้องเรียนรู้เพิ่ม
+ * และคนที่ต้องการโหมดมืดหรือตัวอักษรใหญ่ ตั้งไว้ที่ระดับเครื่องอยู่แล้ว
+ * ซึ่งมีผลกับทุกแอปที่เขาใช้ ไม่ใช่แค่แอปนี้
  *
- * เลือกคำนวณธีมที่ใช้จริงด้วย JavaScript แล้วใส่คลาส `dark` เอง
- * แทนการพึ่ง prefers-color-scheme อย่างเดียว เพราะผู้ใช้ต้องเลือกทับค่าของเครื่องได้
- * (บางคนสายตาเลือนรางอ่านโหมดสว่างชัดกว่า แม้เครื่องจะตั้งเป็นโหมดมืด)
+ * ขนาดตัวอักษรฐานตั้งไว้ใหญ่กว่าเว็บทั่วไปใน CSS และทุกขนาดใช้หน่วย rem
+ * การตั้งขนาดตัวอักษรของเบราว์เซอร์จึงขยายทั้งแอปได้เองอยู่แล้ว
  */
-export function useAppearance(settings: AppSettings) {
-  const { fontScale, theme } = settings
-
-  useEffect(() => {
-    document.documentElement.style.fontSize = FONT_SIZES[fontScale]
-  }, [fontScale])
-
+export function useAppearance() {
   useEffect(() => {
     const root = document.documentElement
     const media = window.matchMedia('(prefers-color-scheme: dark)')
 
     const apply = () => {
-      const isDark = theme === 'dark' || (theme === 'system' && media.matches)
-      root.classList.toggle('dark', isDark)
-      // ให้ตัวควบคุมของระบบ (เช่น scrollbar, ช่องกรอกข้อมูล) เข้าธีมตามไปด้วย
-      root.style.colorScheme = isDark ? 'dark' : 'light'
+      root.classList.toggle('dark', media.matches)
+      // ให้ตัวควบคุมของระบบ เช่น scrollbar และช่องกรอก เข้าธีมตามไปด้วย
+      root.style.colorScheme = media.matches ? 'dark' : 'light'
     }
 
     apply()
-    // ตามการเปลี่ยนธีมของเครื่องเฉพาะตอนที่ผู้ใช้เลือกโหมด "ตามระบบ"
-    if (theme !== 'system') return
     media.addEventListener('change', apply)
     return () => media.removeEventListener('change', apply)
-  }, [theme])
+  }, [])
 }

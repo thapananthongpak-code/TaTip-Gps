@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Announcer } from '@/components/Announcer'
-import { AppearancePanel } from '@/components/AppearancePanel'
 import { BigButton } from '@/components/BigButton'
 import { GpsStatusPanel } from '@/components/GpsStatusPanel'
 import { LanguageToggle } from '@/components/LanguageToggle'
@@ -23,7 +22,6 @@ import { useNearbyPlaces } from '@/hooks/useNearbyPlaces'
 import { useObstacleAlerts } from '@/hooks/useObstacleAlerts'
 import { useObstacleScan } from '@/hooks/useObstacleScan'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
-import { useSettings } from '@/hooks/useSettings'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useWhereAmI } from '@/hooks/useWhereAmI'
 import { speechService } from '@/services'
@@ -53,11 +51,10 @@ export default function App() {
   const [visible, setVisible] = useState(() => !document.hidden)
   const [follow, setFollow] = useState(true)
 
-  const settings = useSettings()
   const geo = useGeolocation()
   const { speak, unlock } = useSpeech()
   const online = useOnlineStatus(started)
-  useAppearance(settings.settings)
+  useAppearance()
 
   useEffect(() => {
     const change = () => {
@@ -236,7 +233,9 @@ export default function App() {
           <>
             {/* กำลังนำทาง = แสดงแค่สิ่งที่ต้องใช้ระหว่างเดิน ไม่มีอย่างอื่นมาแย่งความสนใจ */}
             {nav.status === 'idle' ? (
-              <>
+              /* ค้นหาด้วยชื่อกับเลือกจากหมวดคือคำถามเดียวกันว่าจะไปไหน จึงอยู่ในกล่องเดียว */
+              <section aria-label={t('search.label')} className="panel">
+                <h2>{t('search.heading')}</h2>
                 <SearchPanel
                   position={geo.position}
                   onSelect={chooseDestination}
@@ -248,7 +247,7 @@ export default function App() {
                   onSelect={chooseDestination}
                   isOnline={online}
                 />
-              </>
+              </section>
             ) : (
               <>
                 <NavigationPanel nav={{ ...nav, stop: stopNavigation }} onRepeat={repeat} />
@@ -287,15 +286,6 @@ export default function App() {
             </BigButton>
           </>
         )}
-
-        {/*
-          อยู่นอกเงื่อนไข started เพราะผู้ที่สายตาเลือนรางอาจต้องขยายตัวอักษร
-          หรือเปลี่ยนธีมก่อน ถึงจะอ่านหน้าขออนุญาตใช้ตำแหน่งออก
-        */}
-        <details className="settings-section">
-          <summary>{t('settings.openSettings')}</summary>
-          <AppearancePanel settings={settings} />
-        </details>
 
         <p className="safety-note">{t('nav.safetyNote')}</p>
         <footer>

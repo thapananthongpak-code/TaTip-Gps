@@ -6,7 +6,6 @@
   "language": {
     "switchTo": "Switch to Thai",
     "switchToShort": "ไทย",
-    "current": "Current language: English",
     "switchedSpoken": "Switched to English"
   },
   "permission": {
@@ -60,8 +59,9 @@
     "resultsSpoken_other": "Found {{count}} places. Tap one to choose your destination.",
     "resultsLabel": "Search results",
     "clear": "Clear search",
-    "hint": "Enter at least 2 characters, then press Search.",
-    "submit": "Search"
+    "hint": "Type a name, then press Search",
+    "submit": "Search",
+    "heading": "Where do you want to go?"
   },
   "nav": {
     "calculating": "Calculating your route",
@@ -155,13 +155,7 @@
   },
   "hazard": {
     "crossroadsSpoken": "Caution. A junction may be ahead. The map cannot check traffic or crossing signals. Do not cross based only on this app.",
-    "majorRoadSpoken": "Caution near {{street}}. Traffic may be present. The map cannot confirm a safe crossing.",
-    "disclaimer": "Hazard warnings come from open map data, which does not say whether a pedestrian crossing or traffic signal actually exists. Always rely on your own judgement."
-  },
-  "settings": {
-    "openSettings": "Settings",
-    "cancelClear": "Cancel deletion",
-    "storageFailed": "Changes could not be saved or deleted on this device. Do not rely on emergency contacts remaining after closing the app."
+    "majorRoadSpoken": "Caution near {{street}}. Traffic may be present. The map cannot confirm a safe crossing."
   },
   "offline": {
     "banner": "Offline: search and new routes are unavailable. Check your route and surroundings.",
@@ -176,30 +170,13 @@
     "later": "Later",
     "waitUntilStopped": "Update available. Stop navigation before updating."
   },
-  "appearance": {
-    "title": "Display",
-    "fontSize": "Text size",
-    "fontScale": {
-      "normal": "Normal",
-      "large": "Large",
-      "x-large": "Extra large"
-    },
-    "theme": "Colour theme",
-    "themeOption": {
-      "system": "System",
-      "light": "Light",
-      "dark": "Dark"
-    },
-    "openPanel": "Display settings",
-    "closePanel": "Close display settings"
-  },
   "a11y": {
     "skipToMain": "Skip to main controls",
     "mainLabel": "Main controls"
   },
   "nearby": {
     "title": "Find nearby",
-    "searching": "Searching nearby",
+    "searching": "Searching nearby, this can take a few seconds",
     "searchingSpoken": "Searching around you. This may take a moment.",
     "resultsSpoken_one": "Found {{count}} place within {{radius}}. Tap it to set it as your destination.",
     "resultsSpoken_other": "Found {{count}} places within {{radius}}. Tap one to set it as your destination.",

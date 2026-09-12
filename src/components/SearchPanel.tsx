@@ -37,13 +37,13 @@ export function SearchPanel({ position, onSelect, isOnline }: Props) {
   }, [error, isEmpty, isSearching, query, results.length, speak, t])
 
   return (
-    <section aria-label={t('search.label')} className="search-panel">
-      <label htmlFor={inputId}>
-        <h2>{t('search.label')}</h2>
+    <>
+      <label htmlFor={inputId} className="field-label">
+        {t('search.label')}
       </label>
 
       <form
-        className="search-form mt-2 flex flex-wrap gap-2"
+        className="search-form"
         onSubmit={(event) => {
           event.preventDefault()
           if (isOnline) search()
@@ -60,14 +60,21 @@ export function SearchPanel({ position, onSelect, isOnline }: Props) {
           autoComplete="off"
           className="search-input"
         />
-        {query && (
-          <BigButton variant="secondary" onClick={clear} aria-label={t('search.clear')}>
-            ✕
+        <div className="search-actions">
+          <BigButton type="submit" disabled={!isOnline || isSearching || query.trim().length < 2}>
+            {t('search.submit')}
           </BigButton>
-        )}
-        <BigButton type="submit" disabled={!isOnline || isSearching || query.trim().length < 2}>
-          {t('search.submit')}
-        </BigButton>
+          {query && (
+            <BigButton
+              variant="secondary"
+              onClick={clear}
+              aria-label={t('search.clear')}
+              className="is-clear"
+            >
+              ✕
+            </BigButton>
+          )}
+        </div>
       </form>
 
       <p id={`${inputId}-hint`} className="hint">
@@ -89,7 +96,7 @@ export function SearchPanel({ position, onSelect, isOnline }: Props) {
             return (
               <li key={place.id}>
                 <button type="button" onClick={() => onSelect(place)} className="result-button">
-                  <span>
+                  <span className="result-text">
                     <span className="result-name">{place.name}</span>
                     <span className="result-meta">
                       {distance !== null && `${formatDistance(distance)} · `}
@@ -102,6 +109,6 @@ export function SearchPanel({ position, onSelect, isOnline }: Props) {
           })}
         </ul>
       )}
-    </section>
+    </>
   )
 }

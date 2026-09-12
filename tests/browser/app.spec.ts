@@ -199,9 +199,8 @@ test('the app speaks with its own voice and leaves the live region empty so noth
   await fix(page, 0, 0.00087)
   await expect(page.locator('#navigation-panel')).toContainText('turn left')
 
-  // แอปต้องพูดเอง ไม่ใช่เงียบ
-  const said = await page.evaluate(() => (window as unknown as { __said: string[] }).__said)
-  expect(said.join(' ')).toContain('turn left')
+  // แอปต้องพูดเอง ไม่ใช่เงียบ — รอได้ เพราะคำเตือนที่สำคัญกว่าตัดคิวขึ้นก่อนได้
+  await expect.poll(() => spoken(page), { timeout: 15000 }).toContain('turn left')
 
   // และ live region ต้องว่าง ไม่งั้น VoiceOver จะอ่านประโยคเดียวกันทับเสียงแอป
   await expect(page.getByTestId('announcer')).toHaveText('')
@@ -257,26 +256,23 @@ test('no autocomplete requests before explicit submission; clears stale results 
   await page.getByRole('searchbox').fill('Different')
   await expect(page.getByRole('button', { name: /Test destination/ })).toHaveCount(0)
 })
-test('keyboard settings, language persistence, mobile reflow and automated accessibility', async ({
-  page,
-}) => {
+test('language choice persists and the layout reflows on a narrow screen', async ({ page }) => {
   await setup(page)
-  await page.getByText('Settings', { exact: true }).click()
-  await page.getByRole('radio', { name: 'Extra large' }).check()
-  await page.getByRole('radio', { name: 'Dark', exact: true }).check()
   await page.setViewportSize({ width: 320, height: 640 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  const result = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-    .analyze()
-  expect(result.violations).toEqual([])
-  await page.screenshot({ path: 'test-results/mobile-dark.png', fullPage: true })
+
   await page.getByRole('button', { name: 'Switch to Thai' }).click()
-  await expect(page.locator('html')).toHaveAttribute('lang', 'th')
-  expect(await page.evaluate(() => localStorage.getItem('taathip.language'))).toBe('th')
+  await expect(page.getByRole('heading', { name: 'ตาทิพย์ Navigator' })).toBeVisible()
   await page.reload()
-  await expect(page.locator('html')).toHaveAttribute('lang', 'th')
+  // ภาษาที่เลือกต้องอยู่ข้ามการเปิดใหม่ ไม่งั้นผู้ใช้ต้องตั้งทุกครั้ง
+  await expect(page.getByRole('heading', { name: 'ตาทิพย์ Navigator' })).toBeVisible()
+
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([])
 })
+
 test('app shell reopens offline after service worker installation', async ({ page, context }) => {
   await setup(page)
   await page.evaluate(() => navigator.serviceWorker.ready)
@@ -309,17 +305,11 @@ test('missing GPS updates pause navigation without any browser error callback', 
   await expect(page.locator('#navigation-panel')).toContainText('Walking guidance paused')
 })
 
-test('native radio groups work with arrow keys and the skip link focuses main', async ({
-  page,
-}) => {
+test('the skip link moves focus straight to the main controls', async ({ page }) => {
   await setup(page)
   await page.keyboard.press('Tab')
   await page.keyboard.press('Enter')
   await expect(page.locator('main')).toBeFocused()
-  await page.getByText('Settings', { exact: true }).click()
-  await page.getByRole('radio', { name: 'Normal', exact: true }).focus()
-  await page.keyboard.press('ArrowRight')
-  await expect(page.getByRole('radio', { name: 'Large', exact: true })).toBeChecked()
 })
 
 test('routing outage retries with backoff then announces failure without a driving fallback', async ({
@@ -359,15 +349,15 @@ test('guidance and paused state pass automated accessibility in light and dark t
 }) => {
   await setup(page)
   await startRoute(page)
-  for (const theme of ['Light', 'Dark']) {
+  // ธีมตามการตั้งค่าของเครื่อง จึงจำลองที่ระดับ media query แทนการกดสวิตช์ในแอป
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme })
     await fix(page, 0, 0.0001)
-    await page.getByText('Settings', { exact: true }).click()
-    await page.getByRole('radio', { name: theme, exact: true }).check()
-    await page.getByText('Settings', { exact: true }).click()
     expect(
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
         .violations,
     ).toEqual([])
+
     await fix(page, 0, 0.0001, 80)
     await expect(page.locator('#navigation-panel')).toContainText('Walking guidance paused')
     expect(

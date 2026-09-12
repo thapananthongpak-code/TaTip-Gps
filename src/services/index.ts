@@ -1,4 +1,3 @@
-import { localSettingsService } from './impl/localSettingsService'
 import { nominatimGeocodingService } from './impl/nominatimGeocodingService'
 import { osmMapService } from './impl/osmMapService'
 import { osrmRoutingService } from './impl/osrmRoutingService'
@@ -11,7 +10,6 @@ import type {
   ObstacleService,
   PlacesService,
   RoutingService,
-  SettingsService,
   SpeechService,
 } from './interfaces'
 
@@ -27,9 +25,6 @@ export const mapService: MapService = osmMapService
  * สลับกันเองอัตโนมัติ ไม่มีตัวเลือกให้ผู้ใช้ตั้งค่า
  */
 export const speechService: SpeechService = appSpeechService
-
-/** เก็บค่าตั้งค่าบนเครื่องผู้ใช้เท่านั้น */
-export const settingsService: SettingsService = localSettingsService
 
 /** สลับไป Google Places ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
 export const geocodingService: GeocodingService = nominatimGeocodingService
@@ -49,7 +44,6 @@ export type {
   ObstacleService,
   PlacesService,
   RoutingService,
-  SettingsService,
   SpeechService,
 }
 export * from './config'

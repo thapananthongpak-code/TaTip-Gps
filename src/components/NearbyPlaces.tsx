@@ -7,16 +7,24 @@ import type { GeoPosition, Place, PlaceCategory } from '@/types'
 import { formatDistance } from '@/utils/format'
 import { placeLabel } from '@/utils/places'
 
-/** เรียงตามความถี่ที่คนตาบอดต้องใช้จริง หมวดที่ใช้บ่อยที่สุดอยู่บนสุด */
-const CATEGORIES: PlaceCategory[] = [
-  'transit',
-  'convenience',
-  'toilets',
-  'food',
-  'pharmacy',
-  'hospital',
-  'bank',
-  'government',
+/**
+ * หมวดที่ค้นได้ พร้อมไอคอนประกอบ
+ *
+ * ไอคอนมีไว้ให้ผู้ที่สายตาเลือนรางและคนที่ช่วยเหลือกวาดตาหาปุ่มได้เร็วขึ้น
+ * ตัวไอคอนถูกซ่อนจากโปรแกรมอ่านหน้าจอ เพราะการอ่านว่า "อิโมจิรถบัส"
+ * ก่อนคำว่า "รถเมล์ รถไฟฟ้า" ทุกครั้ง เป็นเสียงส่วนเกินที่ไม่ได้ช่วยอะไร
+ *
+ * เรียงตามความถี่ที่คนตาบอดต้องใช้จริงในชีวิตประจำวัน
+ */
+const CATEGORIES: { key: PlaceCategory; icon: string }[] = [
+  { key: 'transit', icon: '🚉' },
+  { key: 'convenience', icon: '🏪' },
+  { key: 'toilets', icon: '🚻' },
+  { key: 'food', icon: '🍜' },
+  { key: 'pharmacy', icon: '💊' },
+  { key: 'hospital', icon: '🏥' },
+  { key: 'bank', icon: '🏧' },
+  { key: 'government', icon: '🚓' },
 ]
 
 interface Props {
@@ -61,32 +69,33 @@ export function NearbyPlaces({ nearby, position, onSelect, isOnline }: Props) {
     t,
   ])
 
-  return (
-    <section aria-label={t('nearby.title')} className="nearby-panel">
-      {/* ไม่มีคำอธิบายใต้หัวข้อ เพราะป้ายบนปุ่มบอกอยู่แล้วว่าแต่ละหมวดคืออะไร */}
-      <h2>{t('nearby.title')}</h2>
+  const disabled = !isOnline || !position || nearby.isLoading
 
-      <div className="category-grid">
-        {CATEGORIES.map((category) => (
+  return (
+    <>
+      <h3 className="field-label">{t('nearby.title')}</h3>
+
+      <div className="tile-grid">
+        {CATEGORIES.map(({ key, icon }) => (
           <button
-            key={category}
+            key={key}
             type="button"
-            disabled={!isOnline || !position || nearby.isLoading}
-            aria-pressed={nearby.category === category}
+            disabled={disabled}
+            aria-pressed={nearby.category === key}
             onClick={() => {
               speak(t('nearby.searchingSpoken'))
-              nearby.find(category)
+              nearby.find(key)
             }}
-            className={
-              nearby.category === category ? 'category-button is-active' : 'category-button'
-            }
+            className={nearby.category === key ? 'tile is-active' : 'tile'}
           >
-            {t(`nearby.category.${category}`)}
+            <span className="tile-icon" aria-hidden="true">
+              {icon}
+            </span>
+            <span className="tile-label">{t(`nearby.category.${key}`)}</span>
           </button>
         ))}
       </div>
 
-      {/* สถานะการค้นหา ประกาศให้ screen reader ทราบโดยไม่ต้องย้ายโฟกัส */}
       <p className="status-line">
         {nearby.isLoading && t('nearby.searching')}
         {!nearby.isLoading && nearby.error && t('nearby.unavailable')}
@@ -110,7 +119,7 @@ export function NearbyPlaces({ nearby, position, onSelect, isOnline }: Props) {
                   <span className="result-index" aria-hidden="true">
                     {index + 1}
                   </span>
-                  <span>
+                  <span className="result-text">
                     <span className="result-name">{placeLabel(place, t)}</span>
                     <span className="result-meta">
                       {distance !== null && formatDistance(distance)}
@@ -123,6 +132,6 @@ export function NearbyPlaces({ nearby, position, onSelect, isOnline }: Props) {
           })}
         </ul>
       )}
-    </section>
+    </>
   )
 }
