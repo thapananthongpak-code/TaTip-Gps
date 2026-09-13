@@ -6,7 +6,6 @@ import { GpsStatusPanel } from '@/components/GpsStatusPanel'
 import { LanguageToggle } from '@/components/LanguageToggle'
 import { MapView } from '@/components/MapView'
 import { NavigationPanel } from '@/components/NavigationPanel'
-import { NearbyPlaces } from '@/components/NearbyPlaces'
 import { ObstacleReport } from '@/components/ObstacleReport'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { PermissionGate } from '@/components/PermissionGate'
@@ -18,7 +17,6 @@ import { useGpsAnnouncer } from '@/hooks/useGpsAnnouncer'
 import { useHazardAlerts } from '@/hooks/useHazardAlerts'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useNavigationAnnouncer } from '@/hooks/useNavigationAnnouncer'
-import { useNearbyPlaces } from '@/hooks/useNearbyPlaces'
 import { useObstacleAlerts } from '@/hooks/useObstacleAlerts'
 import { useObstacleScan } from '@/hooks/useObstacleScan'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
@@ -50,6 +48,7 @@ export default function App() {
   const [now, setNow] = useState(Date.now)
   const [visible, setVisible] = useState(() => !document.hidden)
   const [follow, setFollow] = useState(true)
+  const [searchResults, setSearchResults] = useState<Place[]>([])
 
   const geo = useGeolocation()
   const { speak, unlock } = useSpeech()
@@ -82,12 +81,6 @@ export default function App() {
   const active = nav.status !== 'idle' && nav.status !== 'arrived'
   const where = useWhereAmI(geo.position)
 
-  /**
-   * การค้นหารอบตัวรับตำแหน่งที่หยาบกว่าการนำทางได้
-   * เพราะคลาดเคลื่อน 50 เมตรไม่เปลี่ยนคำตอบว่า "รอบตัวมีร้านสะดวกซื้อไหม"
-   * ถ้าใช้เกณฑ์เดียวกับการนำทาง ผู้ใช้ในอาคารจะกดค้นหาไม่ได้เลยทั้งที่ควรได้
-   */
-  const nearby = useNearbyPlaces(geo.position)
   const obstacleScan = useObstacleScan(nav.route, started)
 
   const wasPaused = useRef(false)
@@ -101,6 +94,19 @@ export default function App() {
   }, [active, usable, speak, t])
 
   useGpsAnnouncer(geo, started && !active)
+
+  /*
+   * บอกวิธีใช้หนึ่งครั้งหลังได้ตำแหน่งแล้ว
+   *
+   * จุดนี้เคยเงียบสนิท: ผู้ใช้กดอนุญาต ได้ยินว่าพบตำแหน่งแล้ว จากนั้นไม่มีอะไรอีกเลย
+   * ทั้งที่ยังไม่รู้ว่าต้องทำอะไรต่อ เพราะมองไม่เห็นช่องค้นหาที่อยู่บนจอ
+   */
+  const welcomed = useRef(false)
+  useEffect(() => {
+    if (!started || welcomed.current || nav.status !== 'idle' || !geo.position) return
+    welcomed.current = true
+    speak(t('search.welcomeSpoken'))
+  }, [started, nav.status, geo.position, speak, t])
   useNavigationAnnouncer(nav, started)
   useHazardAlerts(nav, { enabled: started })
   useObstacleAlerts(nav, obstacleScan.report.obstacles, nav.route, {
@@ -127,11 +133,11 @@ export default function App() {
   const chooseDestination = useCallback(
     (place: Place) => {
       speechService.cancel()
-      nearby.clear()
+      speak(t('search.selectedSpoken', { destination: place.name }), { priority: 'critical' })
       nav.start(place)
       requestAnimationFrame(() => document.getElementById('navigation-panel')?.focus())
     },
-    [nav, nearby],
+    [nav, speak, t],
   )
 
   /** พูดคำแนะนำปัจจุบันซ้ำ สำหรับตอนที่ฟังไม่ทันหรือมีเสียงรบกวน */
@@ -233,19 +239,13 @@ export default function App() {
           <>
             {/* กำลังนำทาง = แสดงแค่สิ่งที่ต้องใช้ระหว่างเดิน ไม่มีอย่างอื่นมาแย่งความสนใจ */}
             {nav.status === 'idle' ? (
-              /* ค้นหาด้วยชื่อกับเลือกจากหมวดคือคำถามเดียวกันว่าจะไปไหน จึงอยู่ในกล่องเดียว */
               <section aria-label={t('search.label')} className="panel">
                 <h2>{t('search.heading')}</h2>
                 <SearchPanel
                   position={geo.position}
                   onSelect={chooseDestination}
                   isOnline={online}
-                />
-                <NearbyPlaces
-                  nearby={nearby}
-                  position={geo.position}
-                  onSelect={chooseDestination}
-                  isOnline={online}
+                  onResults={setSearchResults}
                 />
               </section>
             ) : (
@@ -276,7 +276,7 @@ export default function App() {
                 follow={follow}
                 onUserPan={() => setFollow(false)}
                 route={nav.route}
-                results={nav.status === 'idle' ? nearby.places : []}
+                results={nav.status === 'idle' ? searchResults : []}
                 obstacles={obstacleScan.report.obstacles}
                 onSelectResult={chooseDestination}
               />

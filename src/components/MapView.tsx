@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { mapService } from '@/services'
 import type { GeoPosition, Obstacle, Place, Route } from '@/types'
-import { placeLabel } from '@/utils/places'
 import { formatDistance } from '@/utils/format'
 import { CurrentPositionMarker } from './CurrentPositionMarker'
 
@@ -71,7 +70,7 @@ function ResultMarkers({
       {results.map((place, index) => {
         const markerLabel = t('map.resultMarker', {
           index: index + 1,
-          name: placeLabel(place, t),
+          name: place.name,
         })
         return (
           <Marker

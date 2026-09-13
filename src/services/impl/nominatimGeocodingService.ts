@@ -3,7 +3,7 @@ import type { GeocodingService, SearchOptions } from '@/services/interfaces'
 import { ServiceError } from '@/types'
 import type { LatLng, Place } from '@/types'
 import { createTtlCache } from '@/utils/cache'
-import { relaxQuery } from '@/utils/query'
+import { queryVariants } from '@/utils/query'
 import { fetchJson } from './httpClient'
 import { createRateLimiter } from './requestQueue'
 
@@ -98,17 +98,21 @@ export const nominatimGeocodingService: GeocodingService = {
 
     let places = raw.map(toPlace)
 
-    // ไม่เจออะไรเลย ลองตัดคำนำหน้าทั่วไปออกแล้วค้นอีกครั้งก่อนจะยอมแพ้
+    // ไม่เจออะไรเลย ลองรูปแบบอื่นของคำค้นทีละแบบก่อนจะยอมแพ้
     // ยิงเพิ่มเฉพาะตอนที่ผลว่างจริงๆ เท่านั้น จึงไม่เพิ่มภาระให้ Nominatim ในกรณีปกติ
+    // และหยุดทันทีที่เจอ ไม่ไล่จนครบทุกแบบ
     if (places.length === 0) {
-      const relaxed = relaxQuery(trimmed)
-      if (relaxed) {
-        params.set('q', relaxed)
+      for (const variant of queryVariants(trimmed)) {
+        if (signal?.aborted) break
+        params.set('q', variant)
         const retry = await fetchJson<NominatimPlace[]>(`${NOMINATIM_BASE_URL}/search?${params}`, {
           signal,
           schedule,
         })
-        if (Array.isArray(retry)) places = retry.map(toPlace)
+        if (Array.isArray(retry) && retry.length > 0) {
+          places = retry.map(toPlace)
+          break
+        }
       }
     }
 

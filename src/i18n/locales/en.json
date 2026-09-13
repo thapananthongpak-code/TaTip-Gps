@@ -61,7 +61,9 @@
     "clear": "Clear search",
     "hint": "Type a name, then press Search",
     "submit": "Search",
-    "heading": "Where do you want to go?"
+    "heading": "Where do you want to go?",
+    "welcomeSpoken": "Welcome to Taa-Thip Navigator. Type the name of a place you want to go to, then press Search.",
+    "selectedSpoken": "{{destination}} set as your destination. Calculating the route."
   },
   "nav": {
     "calculating": "Calculating your route",
@@ -109,9 +111,7 @@
     "zoomOut": "Zoom out",
     "show": "Show supporting map",
     "hide": "Hide map",
-    "resultMarker": "Search result {{index}}: {{name}}",
-    "obstacleMarker": "{{label}} {{distance}} in",
-    "showResults": "Show search results on the map"
+    "obstacleMarker": "{{label}} {{distance}} in"
   },
   "actions": {
     "repeatStatus": "Repeat current status",
@@ -173,38 +173,6 @@
   "a11y": {
     "skipToMain": "Skip to main controls",
     "mainLabel": "Main controls"
-  },
-  "nearby": {
-    "title": "Find nearby",
-    "searching": "Searching nearby, this can take a few seconds",
-    "searchingSpoken": "Searching around you. This may take a moment.",
-    "resultsSpoken_one": "Found {{count}} place within {{radius}}. Tap it to set it as your destination.",
-    "resultsSpoken_other": "Found {{count}} places within {{radius}}. Tap one to set it as your destination.",
-    "noResults": "Nothing found within {{radius}}, even after widening the search",
-    "noResultsSpoken": "No places in this category were found within {{radius}}, even after widening the search. Map data can be incomplete in some areas. Try searching by name instead.",
-    "radiusLabel": "Within {{radius}}",
-    "unnamed": {
-      "transit": "Public transport stop",
-      "convenience": "Shop",
-      "food": "Place to eat",
-      "pharmacy": "Pharmacy",
-      "hospital": "Medical facility",
-      "bank": "Bank or ATM",
-      "toilets": "Public toilet",
-      "government": "Government office"
-    },
-    "category": {
-      "transit": "Bus & train",
-      "convenience": "Convenience store",
-      "food": "Food",
-      "pharmacy": "Pharmacy",
-      "hospital": "Hospital",
-      "bank": "Bank & ATM",
-      "toilets": "Toilets",
-      "government": "Police & government"
-    },
-    "unavailable": "Nearby search is unavailable right now — the map data service is not responding",
-    "unavailableSpoken": "Nearby search is unavailable right now because the map data service is not responding. Please try again, or search by place name instead."
   },
   "obstacle": {
     "title": "Obstacles on the route",

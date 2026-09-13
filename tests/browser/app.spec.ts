@@ -4,8 +4,10 @@ import AxeBuilder from '@axe-core/playwright'
 type OverpassMock = { places: unknown[]; obstacles: unknown[] } | 'fail'
 
 async function setup(page: Page, options: { denial?: boolean; overpass?: OverpassMock } = {}) {
-  await page.addInitScript(({ denial, speechFails }) => {
-    if (!localStorage.getItem('taathip.language')) localStorage.setItem('taathip.language', 'en')
+  await page.addInitScript(({ denial, speechFails, keepLanguage }) => {
+    // ค่าเริ่มต้นของแอปเป็นอังกฤษอยู่แล้ว การตั้งตรงนี้เป็นแค่การล็อกให้เทสต์อื่นคาดเดาได้
+    if (!keepLanguage && !localStorage.getItem('taathip.language'))
+      localStorage.setItem('taathip.language', 'en')
     type TestWindow = Window & {
       __fix: (lat: number, lng: number, accuracy?: number) => void
       __said: string[]
@@ -390,29 +392,6 @@ const overpass = {
   ],
 }
 
-test('nearby category search lists places, names unnamed ones and sets a destination', async ({
-  page,
-}) => {
-  await setup(page, { overpass })
-  await page.getByRole('button', { name: 'Start and allow location access', exact: true }).click()
-  await expect(page.getByText('Good signal', { exact: false })).toBeVisible()
-
-  await page.getByRole('button', { name: 'Bus & train', exact: true }).click()
-
-  // เจาะจงรายการผลลัพธ์ เพราะหมุดบนแผนที่ก็มีชื่อเดียวกัน (ตั้งใจให้เป็นแบบนั้น)
-  const results = page.getByRole('list', { name: 'Search results' })
-  const namedResult = results.getByRole('button', { name: /Test bus stop/ })
-  await expect(namedResult).toBeVisible()
-  // สถานที่ที่ไม่มีชื่อในแผนที่ต้องยังอ่านออกเสียงได้ ไม่ใช่ปุ่มเปล่า
-  await expect(results.getByRole('button', { name: /Public transport stop/ })).toBeVisible()
-
-  // หมุดบนแผนที่ต้องมีเลขกำกับตรงกับลำดับในรายการ เพื่ออ้างอิงถึงรายการเดียวกันได้
-  await expect(page.getByRole('button', { name: 'Search result 1: Test bus stop' })).toBeAttached()
-
-  await namedResult.click()
-  await expect(page.locator('#navigation-panel')).toContainText('turn left')
-})
-
 test('obstacle report separates a failed scan from a genuinely clear route', async ({ page }) => {
   // กรณีตรวจไม่สำเร็จ ต้องไม่บอกว่าเส้นทางปลอดภัย
   await setup(page, { overpass: 'fail' })
@@ -440,4 +419,41 @@ test('obstacle report lists steps found on the route with detail that matters be
   await expect(report).toContainText('12 steps')
   await expect(report).toContainText('going up')
   await expect(report).toContainText('with a handrail')
+})
+
+test('the app starts in English and remembers a switch to Thai', async ({ page }) => {
+  // ไม่ตั้งภาษาไว้ล่วงหน้า เพื่อดูค่าเริ่มต้นจริงที่ผู้ใช้ใหม่จะเจอ
+  await setup(page, { keepLanguage: true })
+  await expect(page.getByRole('heading', { name: 'Taa-Thip Navigator' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Switch to Thai' }).click()
+  await expect(page.getByRole('heading', { name: 'ตาทิพย์ Navigator' })).toBeVisible()
+
+  // เลือกแล้วต้องจำไว้ ไม่ใช่กลับไปอังกฤษทุกครั้งที่เปิดใหม่
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'ตาทิพย์ Navigator' })).toBeVisible()
+})
+
+test('the app explains what to do once a position is known instead of going silent', async ({
+  page,
+}) => {
+  await setup(page)
+  await page.getByRole('button', { name: 'Start and allow location access', exact: true }).click()
+  await expect(page.getByText('Good signal', { exact: false })).toBeVisible()
+
+  // จุดนี้เคยเงียบสนิท ผู้ใช้ที่มองไม่เห็นจึงไม่รู้ว่าต้องทำอะไรต่อ
+  await expect.poll(() => spoken(page)).toContain('Type the name of a place')
+})
+
+test('choosing a destination is confirmed by name before the route is calculated', async ({
+  page,
+}) => {
+  await setup(page)
+  await page.getByRole('button', { name: 'Start and allow location access', exact: true }).click()
+  await expect(page.getByText('Good signal', { exact: false })).toBeVisible()
+  await page.getByRole('searchbox').fill('Test destination')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await page.getByRole('button', { name: /Test destination/ }).click()
+
+  await expect.poll(() => spoken(page)).toContain('Test destination set as your destination')
 })

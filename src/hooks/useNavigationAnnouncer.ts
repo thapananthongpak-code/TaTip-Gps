@@ -13,6 +13,15 @@ import { useSpeech } from './useSpeech'
  */
 const ANNOUNCE_AT_METERS = [8, 20, 50, 100] as const
 
+/**
+ * เงียบได้นานที่สุดกี่มิลลิวินาทีระหว่างเดิน ก่อนจะย้ำคำแนะนำเดิมอีกครั้ง
+ *
+ * จำเป็นเพราะคำเตือนผูกกับ "ระยะถึงจุดเลี้ยว" อย่างเดียว
+ * ช่วงทางตรงยาว 350 เมตรจึงเงียบสนิทเกือบห้านาที ซึ่งนานพอที่ผู้ใช้จะเริ่มไม่แน่ใจ
+ * ว่าแอปยังทำงานอยู่ไหม หรือตัวเองเดินเลยจุดเลี้ยวไปแล้วหรือเปล่า
+ */
+const SILENCE_LIMIT_MS = 45_000
+
 /** สร้างประโยคบอกทางจากขั้นตอนถัดไป */
 function instructionFor(t: TFunction, step: RouteStep, distance: number): string {
   const maneuver = t(`maneuver.${step.maneuver}`)
@@ -49,6 +58,7 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
   const prevErrorRef = useRef<string | null>(null)
   const prevOffRouteRef = useRef(false)
   const prevRetryRef = useRef(0)
+  const lastSpokeAtRef = useRef(0)
 
   // Resuming or changing language must replay the current instruction.
   useEffect(() => {
@@ -110,6 +120,7 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
     if (announcedStepRef.current !== currentStepIndex) {
       announcedStepRef.current = currentStepIndex
       announcedThresholdsRef.current.clear()
+      lastSpokeAtRef.current = Date.now()
       speak(instructionFor(t, nextStep, distanceToNextManeuver), { group: 'navigation' })
       return
     }
@@ -118,13 +129,22 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
     const threshold = ANNOUNCE_AT_METERS.find(
       (m) => distanceToNextManeuver <= m && !announcedThresholdsRef.current.has(m),
     )
-    if (threshold === undefined) return
+
+    if (threshold === undefined) {
+      // ยังไม่ถึงเกณฑ์ไหนเลย แต่ถ้าเงียบมานานก็ย้ำคำแนะนำเดิม
+      // ใช้ group เดียวกับคำแนะนำปกติ ข้อความเก่าที่ยังค้างจึงถูกแทนที่ ไม่สะสมเป็นคิว
+      if (Date.now() - lastSpokeAtRef.current < SILENCE_LIMIT_MS) return
+      lastSpokeAtRef.current = Date.now()
+      speak(instructionFor(t, nextStep, distanceToNextManeuver), { group: 'navigation' })
+      return
+    }
 
     // เกิน threshold ที่ไกลกว่าไปแล้วโดยไม่ได้พูด (เช่น เพิ่งได้สัญญาณ GPS กลับมา) ก็ถือว่าพูดแล้ว
     for (const m of ANNOUNCE_AT_METERS) {
       if (m >= threshold) announcedThresholdsRef.current.add(m)
     }
 
+    lastSpokeAtRef.current = Date.now()
     const maneuver = t(`maneuver.${nextStep.maneuver}`)
     speak(
       threshold <= 8

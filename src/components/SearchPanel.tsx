@@ -12,16 +12,22 @@ interface Props {
   onSelect: (place: Place) => void
   /** ค้นหาต้องใช้อินเทอร์เน็ต ตอนออฟไลน์จึงปิดช่องกรอกและบอกเหตุผลให้ชัด */
   isOnline: boolean
+  /** ส่งผลลัพธ์ขึ้นไปให้แผนที่ปักหมุดพร้อมเลขกำกับตรงกับลำดับในรายการ */
+  onResults?: (results: Place[]) => void
 }
 
 /** ช่องค้นหาจุดหมาย + รายการผลลัพธ์ที่กดเลือกได้ */
-export function SearchPanel({ position, onSelect, isOnline }: Props) {
+export function SearchPanel({ position, onSelect, isOnline, onResults }: Props) {
   const { t } = useTranslation()
   const inputId = useId()
   const { query, setQuery, results, isSearching, error, isEmpty, clear, search } =
     useSearch(position)
   const { speak } = useSpeech()
   const spokenForRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    onResults?.(results)
+  }, [results, onResults])
 
   // ประกาศผลลัพธ์ด้วยเสียงหนึ่งครั้งต่อหนึ่งชุดผลลัพธ์
   useEffect(() => {
@@ -38,7 +44,7 @@ export function SearchPanel({ position, onSelect, isOnline }: Props) {
 
   return (
     <>
-      <label htmlFor={inputId} className="field-label">
+      <label htmlFor={inputId} className="sr-only">
         {t('search.label')}
       </label>
 

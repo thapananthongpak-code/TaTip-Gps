@@ -1,14 +1,5 @@
 import type { LatLng } from './geo'
 
-/**
- * หมวดหมู่สถานที่ที่ค้นหาแบบ "ใกล้ฉัน" ได้
- *
- * เลือกเฉพาะหมวดที่คนตาบอดต้องใช้จริงในชีวิตประจำวัน
- * ไม่ใส่หมวดที่ค้นแล้วเจอเป็นร้อยจนฟังไม่ไหว
- */
-export type PlaceCategory =
-  'transit' | 'convenience' | 'food' | 'pharmacy' | 'hospital' | 'bank' | 'toilets' | 'government'
-
 /** ชนิดสิ่งกีดขวางบนทางเดิน */
 export type ObstacleKind =
   /** บันได — อันตรายที่สุดสำหรับคนตาบอดถ้าไม่รู้ล่วงหน้า */

@@ -19,7 +19,7 @@ void i18n
       th: { translation: th },
       en: { translation: en },
     },
-    fallbackLng: 'th',
+    fallbackLng: 'en',
     supportedLngs: SUPPORTED_LANGUAGES,
     // ให้ th-TH หรือ en-GB ที่เบราว์เซอร์ส่งมา ตกลงมาเป็น th / en ได้เอง
     nonExplicitSupportedLngs: true,
@@ -28,8 +28,16 @@ void i18n
       escapeValue: false,
     },
     detection: {
-      // ภาษาที่ผู้ใช้เลือกไว้มาก่อนภาษาของเบราว์เซอร์เสมอ
-      order: ['localStorage', 'navigator'],
+      /*
+       * ดูเฉพาะภาษาที่ผู้ใช้เลือกไว้เอง ไม่ดูภาษาของเบราว์เซอร์
+       *
+       * เปิดครั้งแรกจึงเป็นภาษาอังกฤษเสมอ แล้วผู้ใช้กดปุ่มเปลี่ยนเป็นไทยได้
+       * และจำไว้ตลอดหลังจากนั้น
+       *
+       * ถ้าดูภาษาของเบราว์เซอร์ด้วย เครื่องที่ตั้งเป็นไทยจะเปิดมาเป็นไทยทันที
+       * ซึ่งทำให้ไม่มีจุดเริ่มต้นที่แน่นอนเวลาทดสอบหรืออธิบายให้คนอื่นฟัง
+       */
+      order: ['localStorage'],
       caches: ['localStorage'],
       lookupLocalStorage: LANGUAGE_STORAGE_KEY,
     },
@@ -37,7 +45,7 @@ void i18n
 
 /** ภาษาปัจจุบันในรูปแบบที่ service ใช้ ('th' | 'en') */
 export function currentLanguage(): ServiceLanguage {
-  const base = i18n.resolvedLanguage ?? i18n.language ?? 'th'
+  const base = i18n.resolvedLanguage ?? i18n.language ?? 'en'
   return base.startsWith('en') ? 'en' : 'th'
 }
 

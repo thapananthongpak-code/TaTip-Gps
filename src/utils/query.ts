@@ -23,26 +23,69 @@ const GENERIC_PREFIXES = [
   'arl',
 ]
 
+/**
+ * ตัวย่อที่คนไทยพิมพ์กันจริง กับคำเต็มที่ใช้ในแผนที่
+ *
+ * ทดสอบแล้วพบว่า "รพ.รามา" ให้ผลลัพธ์ผิดเป็นสะพานพระราม 8
+ * เพราะ Nominatim ไม่รู้จักตัวย่อ แล้วไปจับคำว่า "รามา" กับชื่ออื่นแทน
+ */
+const ABBREVIATIONS: [RegExp, string][] = [
+  [/^รพ\.?\s*/, 'โรงพยาบาล'],
+  [/^ม\.\s*/, 'มหาวิทยาลัย'],
+  [/^ถ\.\s*/, 'ถนน'],
+  [/^ซ\.\s*/, 'ซอย'],
+  [/^จ\.\s*/, 'จังหวัด'],
+  [/^อ\.\s*/, 'อำเภอ'],
+  [/^ต\.\s*/, 'ตำบล'],
+  [/^วิทยาลัย\s*/, 'วิทยาลัย'],
+]
+
 /** เหลือน้อยกว่านี้แล้วค้นหาไม่มีความหมาย */
-const MIN_REMAINDER = 2
+const MIN_LENGTH = 2
 
 /**
- * ตัดคำนำหน้าทั่วไปออกจากคำค้น เพื่อใช้ค้นซ้ำเมื่อครั้งแรกไม่เจออะไรเลย
- * คืน null ถ้าไม่มีอะไรให้ตัด หรือตัดแล้วเหลือสั้นเกินจนค้นหาไม่มีความหมาย
+ * รูปแบบอื่นของคำค้นที่ควรลองเมื่อคำเดิมไม่เจออะไรเลย
  *
- * ทดสอบแล้วช่วยได้จริง: "สถานีรถไฟฟ้าวัดพระศรีมหาธาตุ" 0 ผล -> "วัดพระศรีมหาธาตุ" 3 ผล
+ * คืนเป็นรายการเรียงตามลำดับที่ควรลอง ไม่ซ้ำกับคำเดิม
+ * แต่ละรูปแบบคือความผิดพลาดแบบที่คนพิมพ์จริงทำ ไม่ใช่การเดาสุ่ม:
+ *
+ * - พิมพ์คำนำหน้าที่ไม่มีในชื่อจริง เช่น "สถานีรถไฟฟ้าวัดพระศรีมหาธาตุ"
+ * - ใช้ตัวย่อ เช่น "รพ.รามา" แทน "โรงพยาบาลรามา"
+ * - ไม่เว้นวรรคหน้าตัวเลข เช่น "หมอชิต2" แทน "หมอชิต 2"
+ *
+ * ยิงเพิ่มเฉพาะตอนที่ผลลัพธ์ว่างจริงเท่านั้น จึงไม่เพิ่มภาระในกรณีปกติ
  */
-export function relaxQuery(query: string): string | null {
-  const trimmed = query.trim()
-  const lower = trimmed.toLowerCase()
+export function queryVariants(query: string): string[] {
+  const original = query.trim()
+  const variants: string[] = []
 
-  for (const prefix of GENERIC_PREFIXES) {
-    if (!lower.startsWith(prefix)) continue
-
-    const remainder = trimmed.slice(prefix.length).trim()
-    if (remainder.length < MIN_REMAINDER) return null
-    return remainder
+  const add = (candidate: string) => {
+    const trimmed = candidate.trim()
+    if (trimmed.length >= MIN_LENGTH && trimmed !== original && !variants.includes(trimmed)) {
+      variants.push(trimmed)
+    }
   }
 
-  return null
+  // ขยายตัวย่อก่อน เพราะตัวย่ออยู่หน้าสุดและทำให้ทั้งคำค้นเพี้ยน
+  for (const [pattern, full] of ABBREVIATIONS) {
+    if (pattern.test(original.toLowerCase())) add(original.replace(pattern, full))
+  }
+
+  const lower = original.toLowerCase()
+  for (const prefix of GENERIC_PREFIXES) {
+    if (lower.startsWith(prefix)) {
+      add(original.slice(prefix.length))
+      break
+    }
+  }
+
+  // เว้นวรรคหน้าตัวเลขที่ติดกับตัวอักษร
+  add(original.replace(/([^\d\s])(\d)/g, '$1 $2'))
+
+  return variants
+}
+
+/** เก็บไว้เพื่อความเข้ากันได้ย้อนหลัง — คืนรูปแบบแรกที่ควรลอง */
+export function relaxQuery(query: string): string | null {
+  return queryVariants(query)[0] ?? null
 }
