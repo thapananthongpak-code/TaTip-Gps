@@ -69,6 +69,20 @@ export const OBSTACLE_CORRIDOR_M = 25
 /** เตือนสิ่งกีดขวางล่วงหน้าเมื่อเข้าใกล้กว่านี้ (เมตร) */
 export const OBSTACLE_WARNING_DISTANCE_M = 30
 
+/**
+ * Photon — geocoder ฟรีของ komoot ที่สร้างบนข้อมูล OSM ชุดเดียวกับ Nominatim
+ *
+ * ใช้เป็นตัวสำรองเพราะ "เก่งคนละแบบ" กับ Nominatim อย่างชัดเจน
+ * Photon ทำ index แบบ full-text จึงจับคำที่พิมพ์ไม่ครบได้ ซึ่ง Nominatim ทำไม่ได้เลย
+ * ทดสอบจริง: "เซ็นทรัลเวิล" Nominatim ไม่พบ Photon พบ
+ * แต่กลับกัน "สยามพารากอน" Nominatim พบ Photon ไม่พบ
+ *
+ * ฟรี ไม่ต้องใช้ key แต่เป็นบริการที่เขาเปิดให้ใช้ด้วยความเอื้อเฟื้อ
+ * จึงต้องต่อคิวและยิงเท่าที่จำเป็นเหมือนกับ Nominatim
+ */
+export const PHOTON_BASE_URL = 'https://photon.komoot.io/api'
+export const PHOTON_MIN_INTERVAL_MS = 1000
+
 /** หน่วงการค้นหาอย่างน้อย 1 วินาที กัน rate limit ของ Nominatim */
 export const SEARCH_DEBOUNCE_MS = 1000
 

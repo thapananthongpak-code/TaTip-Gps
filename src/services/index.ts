@@ -1,4 +1,4 @@
-import { nominatimGeocodingService } from './impl/nominatimGeocodingService'
+import { compositeGeocodingService } from './impl/compositeGeocodingService'
 import { osmMapService } from './impl/osmMapService'
 import { osrmRoutingService } from './impl/osrmRoutingService'
 import { overpassObstacleService } from './impl/overpassObstacleService'
@@ -25,7 +25,7 @@ export const mapService: MapService = osmMapService
 export const speechService: SpeechService = appSpeechService
 
 /** สลับไป Google Places ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
-export const geocodingService: GeocodingService = nominatimGeocodingService
+export const geocodingService: GeocodingService = compositeGeocodingService
 
 /** สลับไป Google Directions ในอนาคต = แก้บรรทัดนี้บรรทัดเดียว */
 export const routingService: RoutingService = osrmRoutingService
