@@ -77,6 +77,31 @@ async function setup(page: Page, options: { denial?: boolean; overpass?: Overpas
   // Keep tests deterministic and do not send location/search data to public providers.
   await page.route('https://**/*', async (route) => {
     const url = route.request().url()
+    if (url.includes('photon')) {
+      /*
+       * ตัวสำรองไม่เจอคำเต็มเช่นกัน แต่เจอเมื่อระบบตัดคำให้สั้นลง
+       * ซึ่งเป็นเส้นทางที่ทำให้ผลลัพธ์ถูกติดธงว่าเป็นแค่ "ชื่อใกล้เคียง"
+       */
+      const asked = decodeURIComponent(new URL(url).searchParams.get('q') ?? '')
+      if (asked === 'Typo destination') return route.fulfill({ json: { features: [] } })
+      return route.fulfill({
+        json: {
+          features: [
+            {
+              geometry: { coordinates: [0.001, 0.001] },
+              properties: {
+                name: 'Similar place',
+                osm_key: 'amenity',
+                osm_value: 'cafe',
+                osm_id: 9,
+              },
+            },
+          ],
+        },
+      })
+    }
+    if (url.includes('/search?'))
+      if (options.searchMode === 'approximate') return route.fulfill({ json: [] })
     if (url.includes('/search?'))
       return route.fulfill({
         json: [
@@ -189,7 +214,7 @@ async function startRoute(page: Page) {
   await expect(page.getByText('Good signal', { exact: false })).toBeVisible()
   await page.getByRole('searchbox').fill('Test destination')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.getByRole('button', { name: /Test destination/ }).click()
+  await page.getByRole('list', { name: 'Search results' }).getByRole('button').first().click()
   await expect(page.locator('#navigation-panel')).toContainText('turn left')
 }
 
@@ -254,9 +279,11 @@ test('no autocomplete requests before explicit submission; clears stale results 
   await page.waitForTimeout(1200)
   expect(searches).toBe(0)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await expect(page.getByRole('button', { name: /Test destination/ })).toBeVisible()
+  await expect(
+    page.getByRole('list', { name: 'Search results' }).getByRole('button').first(),
+  ).toBeVisible()
   await page.getByRole('searchbox').fill('Different')
-  await expect(page.getByRole('button', { name: /Test destination/ })).toHaveCount(0)
+  await expect(page.getByRole('list', { name: 'Search results' })).toHaveCount(0)
 })
 test('language choice persists and the layout reflows on a narrow screen', async ({ page }) => {
   await setup(page)
@@ -326,7 +353,7 @@ test('routing outage retries with backoff then announces failure without a drivi
   await page.getByRole('button', { name: 'Start and allow location access', exact: true }).click()
   await page.getByRole('searchbox').fill('Test destination')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.getByRole('button', { name: /Test destination/ }).click()
+  await page.getByRole('list', { name: 'Search results' }).getByRole('button').first().click()
   await expect(page.locator('#navigation-panel')).toContainText('The map service is unavailable', {
     timeout: 12000,
   })
@@ -453,7 +480,43 @@ test('choosing a destination is confirmed by name before the route is calculated
   await expect(page.getByText('Good signal', { exact: false })).toBeVisible()
   await page.getByRole('searchbox').fill('Test destination')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.getByRole('button', { name: /Test destination/ }).click()
+  await page.getByRole('list', { name: 'Search results' }).getByRole('button').first().click()
 
   await expect.poll(() => spoken(page)).toContain('Test destination set as your destination')
+})
+
+test('a sparse GPS feed still reaches the destination and offers a finish button', async ({
+  page,
+}) => {
+  await setup(page)
+  await startRoute(page)
+
+  /*
+   * GPS ในเมืองอัปเดตห่างกันหลายสิบเมตรได้ เดินตามเส้นทางด้วยก้าวใหญ่
+   * เพื่อให้ข้ามช่วงระยะที่ใช้ตัดสินว่าเลี้ยวแล้ว ซึ่งเคยทำให้ค้างอยู่ขั้นตอนเดิมถาวร
+   */
+  for (const lng of [0.0004, 0.0008, 0.001]) await fix(page, 0, lng)
+  await fix(page, 0.0005, 0.001)
+  await fix(page, 0.0009, 0.001)
+
+  const finish = page.getByRole('button', { name: 'Finish trip' })
+  await expect(finish).toBeVisible()
+
+  // จบการเดินทางต่างจากยกเลิกกลางทาง ทั้งข้อความและการกลับไปหน้าค้นหา
+  await finish.click()
+  await expect.poll(() => spoken(page)).toContain('Trip finished')
+  await expect(page.getByRole('searchbox')).toBeFocused()
+})
+
+test('search offers similar names instead of an empty screen when nothing matches', async ({
+  page,
+}) => {
+  await setup(page, { searchMode: 'approximate' })
+  await page.getByRole('button', { name: 'Start and allow location access', exact: true }).click()
+  await page.getByRole('searchbox').fill('Typo destination')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+
+  // ต้องบอกให้ชัดว่าไม่ใช่สิ่งที่พิมพ์หา ไม่งั้นผู้ใช้ที่ฟังอย่างเดียวอาจเลือกแล้วเดินผิดที่
+  await expect(page.getByText(/No match for/)).toBeVisible()
+  await expect.poll(() => spoken(page)).toContain('similar names')
 })

@@ -19,10 +19,12 @@ function instructionText(t: TFunction, progress: NonNullable<UseNavigationResult
 interface Props {
   nav: UseNavigationResult
   onRepeat: () => void
+  /** จบการเดินทางเมื่อถึงจุดหมายแล้ว ต่างจากการยกเลิกกลางทาง */
+  onFinish: () => void
 }
 
 /** แผงนำทางระหว่างเดินทาง — คำแนะนำถัดไป ระยะที่เหลือ และปุ่มควบคุม */
-export function NavigationPanel({ nav, onRepeat }: Props) {
+export function NavigationPanel({ nav, onRepeat, onFinish }: Props) {
   const { t } = useTranslation()
   const { status, destination, progress, error, isOffRoute, isRecalculating } = nav
 
@@ -106,14 +108,26 @@ export function NavigationPanel({ nav, onRepeat }: Props) {
             {t('nav.confirmTurn')}
           </BigButton>
         )}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <BigButton variant="secondary" onClick={onRepeat} className="flex-1">
-          {t('nav.repeatInstruction')}
+
+      {/*
+        ถึงจุดหมายแล้วเหลือปุ่มเดียว และเป็นปุ่มหลักสีปกติ
+        ไม่ใช่ปุ่มสีแดงที่สื่อว่ากำลังยกเลิกอะไรบางอย่าง เพราะการเดินทางสำเร็จแล้ว
+        ส่วนปุ่มพูดคำแนะนำซ้ำไม่มีความหมายอีกต่อไป จึงเอาออกไม่ให้กดพลาด
+      */}
+      {status === 'arrived' ? (
+        <BigButton onClick={onFinish} className="mt-3 w-full">
+          {t('nav.finishButton')}
         </BigButton>
-        <BigButton variant="danger" onClick={nav.stop} className="flex-1">
-          {t('nav.stopButton')}
-        </BigButton>
-      </div>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <BigButton variant="secondary" onClick={onRepeat} className="flex-1">
+            {t('nav.repeatInstruction')}
+          </BigButton>
+          <BigButton variant="danger" onClick={nav.stop} className="flex-1">
+            {t('nav.stopButton')}
+          </BigButton>
+        </div>
+      )}
     </section>
   )
 }

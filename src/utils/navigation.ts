@@ -59,15 +59,31 @@ export function computeProgress(
   const turnDistance = mapService.distanceBetween(position, upcoming.location)
   const incoming = distanceToPath(position, steps[stepIndex].geometry)
   const outgoing = distanceToPath(position, upcoming.geometry)
-  if (
-    stepIndex + 1 < lastIndex &&
+
+  /** เพิ่งเลี้ยวผ่านมา — ยังอยู่ใกล้จุดเลี้ยวและเริ่มเห็นว่าอยู่บนทางออกแล้ว */
+  const justTurned =
     turnDistance >= STEP_ADVANCE_M &&
     turnDistance < 35 &&
     outgoing < 7 &&
     incoming > 7 &&
     outgoing + 5 < incoming
-  )
-    stepIndex += 1
+
+  /*
+   * เลี้ยวผ่านมานานแล้ว — อยู่บนทางออกชัดเจนและห่างจากทางเข้ามาก
+   *
+   * จำเป็นเพราะ GPS ในเมืองอาจอัปเดตห่างกันหลายสิบเมตร ทำให้กระโดดข้ามช่วง
+   * ที่ใช้ตัดสินว่า "เพิ่งเลี้ยว" ไปทั้งช่วง แล้วหลังจากนั้นระยะถึงจุดเลี้ยว
+   * มีแต่จะไกลขึ้นเรื่อยๆ จนไม่มีวันกลับเข้าเงื่อนไขได้อีก
+   *
+   * ทดสอบแล้วพบว่าถ้า GPS อัปเดตทุก 40 เมตร ระบบจะค้างอยู่ขั้นตอนเดิมถาวร
+   * พูดว่า "เลี้ยวขวา" ทั้งที่ผู้ใช้เลี้ยวไปแล้วและกำลังเดินอยู่บนถนนถัดไป
+   *
+   * ยังยึดหลักเดิมคือต้องมีหลักฐานบนทางออก ไม่ใช่แค่ GPS เข้าใกล้จุดเลี้ยว
+   * แต่ใช้เกณฑ์ที่เข้มกว่าเพื่อชดเชยการที่ไม่จำกัดระยะ
+   */
+  const wellPastTurn = outgoing < 10 && incoming > 30 && outgoing + 20 < incoming
+
+  if (stepIndex + 1 < lastIndex && (justTurned || wellPastTurn)) stepIndex += 1
 
   const nextStep = stepIndex < lastIndex ? steps[stepIndex + 1] : steps[lastIndex]
   const directDistance = mapService.distanceBetween(position, nextStep.location)
@@ -87,7 +103,18 @@ export function computeProgress(
 
   // Only the final route segment may produce arrival. Never use proximity to a
   // building centroid alone; report the remaining endpoint-to-building offset.
-  const atRouteEnd = stepIndex >= lastIndex - 1 && distanceToNextManeuver < 12
+  /*
+   * ถึงปลายเส้นทางได้ ก็ต่อเมื่อระบบติดตามอยู่บนช่วงสุดท้ายมาก่อนแล้ว
+   *
+   * เงื่อนไข fromStepIndex สำคัญ: ห้ามประกาศว่าถึงจุดหมายจากการกระโดดมาถึง
+   * ในอัปเดตเดียว เพราะพิกัดที่ตรงกับปลายทางไม่ได้แปลว่าเดินมาถึงจริง
+   * อาจอยู่คนละฝั่งกำแพงหรือคนละชั้นของอาคารก็ได้
+   *
+   * ระหว่างเดินจริง อัปเดตก่อนหน้าจะพาเข้าช่วงสุดท้ายอยู่แล้ว
+   * เงื่อนไขนี้จึงหน่วงแค่หนึ่งอัปเดต ไม่ได้ทำให้ประกาศช้าอย่างมีนัยสำคัญ
+   */
+  const trackedFinalLeg = Math.min(Math.max(fromStepIndex, 0), lastIndex - 1) >= lastIndex - 1
+  const atRouteEnd = trackedFinalLeg && stepIndex >= lastIndex - 1 && distanceToNextManeuver < 12
 
   return {
     stepIndex,

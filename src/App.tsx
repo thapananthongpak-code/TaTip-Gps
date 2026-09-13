@@ -6,6 +6,7 @@ import { GpsStatusPanel } from '@/components/GpsStatusPanel'
 import { LanguageToggle } from '@/components/LanguageToggle'
 import { MapView } from '@/components/MapView'
 import { NavigationPanel } from '@/components/NavigationPanel'
+import { NearbyPlaces } from '@/components/NearbyPlaces'
 import { ObstacleReport } from '@/components/ObstacleReport'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { PermissionGate } from '@/components/PermissionGate'
@@ -17,6 +18,7 @@ import { useGpsAnnouncer } from '@/hooks/useGpsAnnouncer'
 import { useHazardAlerts } from '@/hooks/useHazardAlerts'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useNavigationAnnouncer } from '@/hooks/useNavigationAnnouncer'
+import { useNearbyPlaces } from '@/hooks/useNearbyPlaces'
 import { useObstacleAlerts } from '@/hooks/useObstacleAlerts'
 import { useObstacleScan } from '@/hooks/useObstacleScan'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
@@ -81,6 +83,13 @@ export default function App() {
   const active = nav.status !== 'idle' && nav.status !== 'arrived'
   const where = useWhereAmI(geo.position)
 
+  /**
+   * การค้นหารอบตัวรับตำแหน่งที่หยาบกว่าการนำทางได้
+   * เพราะคลาดเคลื่อน 50 เมตรไม่เปลี่ยนคำตอบว่า "รอบตัวมีร้านสะดวกซื้อไหม"
+   * ถ้าใช้เกณฑ์เดียวกับการนำทาง ผู้ใช้ในอาคารจะกดค้นหาไม่ได้เลยทั้งที่ควรได้
+   */
+  const nearby = useNearbyPlaces(geo.position)
+
   const obstacleScan = useObstacleScan(nav.route, started)
 
   const wasPaused = useRef(false)
@@ -133,11 +142,12 @@ export default function App() {
   const chooseDestination = useCallback(
     (place: Place) => {
       speechService.cancel()
+      nearby.clear()
       speak(t('search.selectedSpoken', { destination: place.name }), { priority: 'critical' })
       nav.start(place)
       requestAnimationFrame(() => document.getElementById('navigation-panel')?.focus())
     },
-    [nav, speak, t],
+    [nav, nearby, speak, t],
   )
 
   /** พูดคำแนะนำปัจจุบันซ้ำ สำหรับตอนที่ฟังไม่ทันหรือมีเสียงรบกวน */
@@ -196,6 +206,15 @@ export default function App() {
     void where.announce()
   }, [geo.position, speak, t, where])
 
+  /** จบการเดินทางหลังถึงจุดหมาย — ต่างจากการยกเลิกกลางทางทั้งข้อความและความรู้สึก */
+  const finishTrip = useCallback(() => {
+    nav.stop()
+    speak(t('nav.finishedSpoken'), { priority: 'critical' })
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+    )
+  }, [nav, speak, t])
+
   const stopNavigation = useCallback(() => {
     nav.stop()
     speak(t('nav.stoppedSpoken'), { priority: 'critical' })
@@ -247,10 +266,20 @@ export default function App() {
                   isOnline={online}
                   onResults={setSearchResults}
                 />
+                <NearbyPlaces
+                  nearby={nearby}
+                  position={geo.position}
+                  onSelect={chooseDestination}
+                  isOnline={online}
+                />
               </section>
             ) : (
               <>
-                <NavigationPanel nav={{ ...nav, stop: stopNavigation }} onRepeat={repeat} />
+                <NavigationPanel
+                  nav={{ ...nav, stop: stopNavigation }}
+                  onRepeat={repeat}
+                  onFinish={finishTrip}
+                />
                 {nav.route && (
                   <ObstacleReport
                     report={obstacleScan.report}
@@ -276,7 +305,13 @@ export default function App() {
                 follow={follow}
                 onUserPan={() => setFollow(false)}
                 route={nav.route}
-                results={nav.status === 'idle' ? searchResults : []}
+                results={
+                  nav.status === 'idle'
+                    ? nearby.places.length > 0
+                      ? nearby.places
+                      : searchResults
+                    : []
+                }
                 obstacles={obstacleScan.report.obstacles}
                 onSelectResult={chooseDestination}
               />

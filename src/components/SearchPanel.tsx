@@ -39,8 +39,13 @@ export function SearchPanel({ position, onSelect, isOnline, onResults }: Props) 
 
     if (error) speak(t(`errors.${error.code}_SPOKEN`), { priority: 'critical' })
     else if (isEmpty) speak(t('search.noResultsSpoken'))
-    else if (results.length > 0) speak(t('search.resultsSpoken', { count: results.length }))
-  }, [error, isEmpty, isSearching, query, results.length, speak, t])
+    else if (results.some((place) => place.isApproximate)) {
+      // ต้องเตือนก่อนที่ผู้ใช้จะเลือก ไม่ใช่ปล่อยให้รู้ตอนเดินไปถึงแล้ว
+      speak(t('search.approximateSpoken', { query: query.trim(), count: results.length }), {
+        priority: 'critical',
+      })
+    } else if (results.length > 0) speak(t('search.resultsSpoken', { count: results.length }))
+  }, [error, isEmpty, isSearching, query, results, speak, t])
 
   return (
     <>
@@ -93,6 +98,11 @@ export function SearchPanel({ position, onSelect, isOnline, onResults }: Props) 
         {isOnline && isSearching && t('search.searching')}
         {isOnline && !isSearching && error && t(`errors.${error.code}`)}
         {isOnline && !isSearching && !error && isEmpty && t('search.noResults')}
+        {isOnline &&
+          !isSearching &&
+          !error &&
+          results.some((place) => place.isApproximate) &&
+          t('search.approximate', { query: query.trim() })}
       </p>
 
       {results.length > 0 && (

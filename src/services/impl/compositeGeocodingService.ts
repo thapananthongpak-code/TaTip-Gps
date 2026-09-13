@@ -1,5 +1,6 @@
 import type { GeocodingService, SearchOptions } from '@/services/interfaces'
 import type { LatLng, Place } from '@/types'
+import { shortenedQueries } from '@/utils/query'
 import { nominatimGeocodingService } from './nominatimGeocodingService'
 import { photonGeocodingService } from './photonGeocodingService'
 
@@ -25,7 +26,23 @@ export const compositeGeocodingService: GeocodingService = {
     if (primary.length > 0) return primary
 
     try {
-      return await photonGeocodingService.search(query, options)
+      const fallback = await photonGeocodingService.search(query, options)
+      if (fallback.length > 0) return fallback
+
+      /*
+       * ยังไม่เจออะไรเลย ลองคำที่สั้นลงเพื่อหา "ชื่อใกล้เคียง"
+       *
+       * คนสะกดผิดตอนท้ายคำบ่อยกว่าตอนต้น การตัดท้ายออกจึงมีโอกาสเจอสิ่งที่ตั้งใจหา
+       * ผลที่ได้อาจไม่ตรงเป๊ะ แต่ดีกว่าหน้าจอว่างเปล่าที่ไม่บอกอะไรเลย
+       * เพราะอย่างน้อยผู้ใช้ได้ยินว่ามีอะไรชื่อคล้ายกันอยู่แถวนั้นบ้าง
+       */
+      for (const shortened of shortenedQueries(query)) {
+        const near = await photonGeocodingService.search(shortened, options)
+        // ติดธงไว้ให้ชั้น UI บอกผู้ใช้ว่านี่ไม่ใช่สิ่งที่พิมพ์หามา
+        if (near.length > 0) return near.map((place) => ({ ...place, isApproximate: true }))
+      }
+
+      return []
     } catch {
       // ตัวสำรองล่มไม่ควรกลายเป็นข้อผิดพลาดของทั้งการค้นหา
       // ผู้ใช้ควรเห็นว่า "ไม่พบ" ซึ่งเป็นผลของตัวหลักที่ทำงานสำเร็จแล้ว

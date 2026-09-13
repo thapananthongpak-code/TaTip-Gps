@@ -1,3 +1,12 @@
+/**
+ * หมวดหมู่สถานที่ที่ค้นหาแบบ "ใกล้ฉัน" ได้
+ *
+ * เลือกเฉพาะหมวดที่คนตาบอดต้องใช้จริงในชีวิตประจำวัน
+ * ไม่ใส่หมวดที่ค้นแล้วเจอเป็นร้อยจนฟังไม่ไหว
+ */
+export type PlaceCategory =
+  'transit' | 'convenience' | 'food' | 'pharmacy' | 'hospital' | 'bank' | 'toilets' | 'government'
+
 import type { LatLng } from './geo'
 
 /** ชนิดสิ่งกีดขวางบนทางเดิน */

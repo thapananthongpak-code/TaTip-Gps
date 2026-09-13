@@ -63,7 +63,9 @@
     "submit": "Search",
     "heading": "Where do you want to go?",
     "welcomeSpoken": "Welcome to Taa-Thip Navigator. Type the name of a place you want to go to, then press Search.",
-    "selectedSpoken": "{{destination}} set as your destination. Calculating the route."
+    "selectedSpoken": "{{destination}} set as your destination. Calculating the route.",
+    "approximate": "No match for \"{{query}}\". These places have similar names",
+    "approximateSpoken": "No place named {{query}} was found, but {{count}} places have similar names. Please listen to each name carefully before choosing, as they may not be what you want."
   },
   "nav": {
     "calculating": "Calculating your route",
@@ -91,7 +93,9 @@
     "paused": "Walking guidance paused: location or audio is not ready. Stop somewhere safe. Check GPS and test audio before continuing.",
     "resumed": "Guidance is available again. Check your surroundings before continuing.",
     "confirmTurn": "Confirm I have passed this turn",
-    "safetyNote": "Use with a cane or guide dog. This app cannot detect vehicles, obstacles or crossing signals, or tell you it is safe to cross. Keep the app visible during use."
+    "safetyNote": "Use with a cane or guide dog. This app cannot detect vehicles, obstacles or crossing signals, or tell you it is safe to cross. Keep the app visible during use.",
+    "finishButton": "Finish trip",
+    "finishedSpoken": "Trip finished. Ready to search for a new destination."
   },
   "whereAmI": {
     "button": "Where am I?",
@@ -111,7 +115,8 @@
     "zoomOut": "Zoom out",
     "show": "Show supporting map",
     "hide": "Hide map",
-    "obstacleMarker": "{{label}} {{distance}} in"
+    "obstacleMarker": "{{label}} {{distance}} in",
+    "resultMarker": "Search result {{index}}: {{name}}"
   },
   "actions": {
     "repeatStatus": "Repeat current status",
@@ -221,5 +226,37 @@
     "stepCount_one": "{{count}} step",
     "stepCount_other": "{{count}} steps",
     "handrail": "with a handrail"
+  },
+  "nearby": {
+    "title": "Find nearby",
+    "searching": "Searching nearby, this can take a few seconds",
+    "searchingSpoken": "Searching around you. This may take a moment.",
+    "resultsSpoken_one": "Found {{count}} place within {{radius}}. Tap it to set it as your destination.",
+    "resultsSpoken_other": "Found {{count}} places within {{radius}}. Tap one to set it as your destination.",
+    "noResults": "Nothing found within {{radius}}, even after widening the search",
+    "noResultsSpoken": "No places in this category were found within {{radius}}, even after widening the search. Map data can be incomplete in some areas. Try searching by name instead.",
+    "radiusLabel": "Within {{radius}}",
+    "unnamed": {
+      "transit": "Public transport stop",
+      "convenience": "Shop",
+      "food": "Place to eat",
+      "pharmacy": "Pharmacy",
+      "hospital": "Medical facility",
+      "bank": "Bank or ATM",
+      "toilets": "Public toilet",
+      "government": "Government office"
+    },
+    "category": {
+      "transit": "Bus & train",
+      "convenience": "Convenience store",
+      "food": "Food",
+      "pharmacy": "Pharmacy",
+      "hospital": "Hospital",
+      "bank": "Bank & ATM",
+      "toilets": "Toilets",
+      "government": "Police & government"
+    },
+    "unavailable": "Nearby search is unavailable right now — the map data service is not responding",
+    "unavailableSpoken": "Nearby search is unavailable right now because the map data service is not responding. Please try again, or search by place name instead."
   }
 }

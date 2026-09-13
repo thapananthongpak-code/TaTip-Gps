@@ -42,6 +42,21 @@ describe('walking progression', () => {
   it('rejects empty route steps rather than crashing later on undefined coordinates', () => {
     expect(() => computeProgress({ ...route, steps: [] }, a, 0)).toThrow()
   })
+  it('advances after a sparse GPS jump that skips the usual turn window', () => {
+    /*
+     * GPS ในเมืองอัปเดตห่างกันหลายสิบเมตรได้ ถ้าเลื่อนขั้นตอนได้เฉพาะช่วง 8-35 เมตร
+     * การกระโดดครั้งเดียวจะข้ามช่วงนั้นไป แล้วค้างอยู่ขั้นตอนเดิมถาวร
+     * ผู้ใช้จะได้ยินว่า "เลี้ยวซ้าย" ต่อไปเรื่อยๆ ทั้งที่เลี้ยวไปแล้ว
+     */
+    const wellPastTurn = { lat: 0.0005, lng: 0.001 }
+    expect(computeProgress(route, wellPastTurn, 0).stepIndex).toBe(1)
+  })
+
+  it('ไม่เลื่อนขั้นตอนเมื่อยังอยู่บนทางเข้าแม้จะห่างจากจุดเลี้ยวมาก', () => {
+    // อยู่กลางช่วงแรก ห่างจากจุดเลี้ยว 55 เมตร แต่ยังอยู่บนเส้นทางเดิม
+    expect(computeProgress(route, { lat: 0, lng: 0.0005 }, 0).stepIndex).toBe(0)
+  })
+
   it('measures distance along a curved path rather than through a building', () => {
     const end = { lat: 0.00005, lng: 0 }
     const curved = {
