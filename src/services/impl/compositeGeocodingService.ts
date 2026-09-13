@@ -1,6 +1,7 @@
 import type { GeocodingService, SearchOptions } from '@/services/interfaces'
 import type { LatLng, Place } from '@/types'
 import { shortenedQueries } from '@/utils/query'
+import { looksUnrelated } from '@/utils/similarity'
 import { nominatimGeocodingService } from './nominatimGeocodingService'
 import { photonGeocodingService } from './photonGeocodingService'
 
@@ -20,14 +21,26 @@ import { photonGeocodingService } from './photonGeocodingService'
  * เมื่อคำค้นถูกต้องอยู่แล้ว ซึ่งเป็นกรณีส่วนใหญ่
  * Photon จึงถูกเรียกเฉพาะตอนที่ผลว่างจริง ไม่เพิ่มภาระในกรณีปกติ
  */
+/**
+ * ติดธงผลที่ชื่อไม่เกี่ยวกับที่พิมพ์
+ *
+ * ผู้ให้บริการคืนผลที่ผิดตัวมาได้จริง เช่นพิมพ์ "รพ.รามา" แล้วได้ "สะพานพระราม 8"
+ * หรือพิมพ์ "SiamParagon" แล้วได้ "Siam Dragon" ซึ่งอันตรายสำหรับคนที่ตัดสินจากเสียงอย่างเดียว
+ */
+function flagUnrelated(query: string, places: Place[]): Place[] {
+  return places.map((place) =>
+    looksUnrelated(query, place.name) ? { ...place, isApproximate: true } : place,
+  )
+}
+
 export const compositeGeocodingService: GeocodingService = {
   async search(query: string, options: SearchOptions = {}): Promise<Place[]> {
     const primary = await nominatimGeocodingService.search(query, options)
-    if (primary.length > 0) return primary
+    if (primary.length > 0) return flagUnrelated(query, primary)
 
     try {
       const fallback = await photonGeocodingService.search(query, options)
-      if (fallback.length > 0) return fallback
+      if (fallback.length > 0) return flagUnrelated(query, fallback)
 
       /*
        * ยังไม่เจออะไรเลย ลองคำที่สั้นลงเพื่อหา "ชื่อใกล้เคียง"

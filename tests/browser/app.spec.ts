@@ -520,3 +520,21 @@ test('search offers similar names instead of an empty screen when nothing matche
   await expect(page.getByText(/No match for/)).toBeVisible()
   await expect.poll(() => spoken(page)).toContain('similar names')
 })
+
+test('the page shell is English before React loads, so nothing is announced in Thai first', async ({
+  page,
+}) => {
+  await setup(page, { keepLanguage: true })
+
+  /*
+   * นี่คือสิ่งที่โปรแกรมอ่านหน้าจออ่านก่อน React จะทำงาน
+   * ถ้าเปลือกเป็นไทย ผู้ใช้จะได้ยินไทยตั้งแต่วินาทีที่เปิดลิงก์แม้แอปจะเป็นอังกฤษ
+   */
+  expect(await page.evaluate(() => document.documentElement.lang)).toBe('en')
+  await expect(page).toHaveTitle(/Taa-Thip/)
+
+  // เลือกไทยแล้วทั้ง lang และ title ต้องเปลี่ยนตาม
+  await page.getByRole('button', { name: 'Switch to Thai' }).click()
+  await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe('th')
+  await expect(page).toHaveTitle(/ตาทิพย์/)
+})

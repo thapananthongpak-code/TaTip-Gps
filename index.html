@@ -1,5 +1,11 @@
 <!doctype html>
-<html lang="th">
+<!--
+      ภาษาของเปลือกหน้าเว็บต้องเป็นอังกฤษให้ตรงกับค่าเริ่มต้นของแอป
+      เพราะนี่คือสิ่งที่โปรแกรมอ่านหน้าจออ่านก่อน React จะทำงาน
+      ถ้าตั้งเป็นไทยไว้ ผู้ใช้จะได้ยินไทยตั้งแต่วินาทีที่เปิดลิงก์แม้แอปจะเป็นอังกฤษ
+      เมื่อผู้ใช้เลือกไทย โค้ดใน i18n จะเปลี่ยน lang กับ title ให้เอง
+    -->
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -10,12 +16,12 @@
     <!-- ให้เปิดแบบเต็มจอเหมือนแอปเมื่อเพิ่มลงหน้าจอโฮมบน iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="ตาทิพย์" />
+    <meta name="apple-mobile-web-app-title" content="Taa-Thip" />
     <meta
       name="description"
-      content="ตาทิพย์ Navigator — แอปนำทางด้วยเสียงสำหรับผู้พิการทางสายตา รองรับภาษาไทยและอังกฤษ"
+      content="Taa-Thip Navigator — voice navigation for people with visual impairment, in English and Thai"
     />
-    <title>ตาทิพย์ Navigator</title>
+    <title>Taa-Thip Navigator</title>
   </head>
   <body>
     <div id="root"></div>

@@ -13,10 +13,12 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png', 'icons/icon-64.png'],
       manifest: {
-        name: 'ตาทิพย์ Navigator',
-        short_name: 'ตาทิพย์',
-        description: 'แอปนำทางด้วยเสียงสำหรับผู้พิการทางสายตา รองรับภาษาไทยและอังกฤษ',
-        lang: 'th',
+        name: 'Taa-Thip Navigator',
+        short_name: 'Taa-Thip',
+        description: 'Voice navigation for people with visual impairment, in English and Thai',
+        // manifest เป็นไฟล์คงที่ เปลี่ยนตามภาษาที่ผู้ใช้เลือกไม่ได้
+        // จึงใช้ภาษาเริ่มต้นของแอปเพื่อให้ตรงกับสิ่งที่ผู้ใช้เจอตอนเปิดครั้งแรก
+        lang: 'en',
         dir: 'ltr',
         theme_color: '#0f52ab',
         background_color: '#ffffff',
