@@ -6,7 +6,6 @@ import { GpsStatusPanel } from '@/components/GpsStatusPanel'
 import { LanguageToggle } from '@/components/LanguageToggle'
 import { MapView } from '@/components/MapView'
 import { NavigationPanel } from '@/components/NavigationPanel'
-import { NearbyPlaces } from '@/components/NearbyPlaces'
 import { ObstacleReport } from '@/components/ObstacleReport'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { PermissionGate } from '@/components/PermissionGate'
@@ -18,7 +17,6 @@ import { useGpsAnnouncer } from '@/hooks/useGpsAnnouncer'
 import { useHazardAlerts } from '@/hooks/useHazardAlerts'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useNavigationAnnouncer } from '@/hooks/useNavigationAnnouncer'
-import { useNearbyPlaces } from '@/hooks/useNearbyPlaces'
 import { useObstacleAlerts } from '@/hooks/useObstacleAlerts'
 import { useObstacleScan } from '@/hooks/useObstacleScan'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
@@ -91,13 +89,6 @@ export default function App() {
   useWakeLock(active)
   const where = useWhereAmI(geo.position)
 
-  /**
-   * การค้นหารอบตัวรับตำแหน่งที่หยาบกว่าการนำทางได้
-   * เพราะคลาดเคลื่อน 50 เมตรไม่เปลี่ยนคำตอบว่า "รอบตัวมีร้านสะดวกซื้อไหม"
-   * ถ้าใช้เกณฑ์เดียวกับการนำทาง ผู้ใช้ในอาคารจะกดค้นหาไม่ได้เลยทั้งที่ควรได้
-   */
-  const nearby = useNearbyPlaces(geo.position)
-
   const obstacleScan = useObstacleScan(nav.route, started)
 
   const wasPaused = useRef(false)
@@ -155,12 +146,11 @@ export default function App() {
   const chooseDestination = useCallback(
     (place: Place) => {
       speechService.cancel()
-      nearby.clear()
       speak(t('search.selectedSpoken', { destination: place.name }), { priority: 'critical' })
       nav.start(place)
       requestAnimationFrame(() => document.getElementById('navigation-panel')?.focus())
     },
-    [nav, nearby, speak, t],
+    [nav, speak, t],
   )
 
   /** พูดคำแนะนำปัจจุบันซ้ำ สำหรับตอนที่ฟังไม่ทันหรือมีเสียงรบกวน */
@@ -279,12 +269,6 @@ export default function App() {
                   isOnline={online}
                   onResults={setSearchResults}
                 />
-                <NearbyPlaces
-                  nearby={nearby}
-                  position={geo.position}
-                  onSelect={chooseDestination}
-                  isOnline={online}
-                />
               </section>
             ) : (
               <>
@@ -318,13 +302,7 @@ export default function App() {
                 follow={follow}
                 onUserPan={() => setFollow(false)}
                 route={nav.route}
-                results={
-                  nav.status === 'idle'
-                    ? nearby.places.length > 0
-                      ? nearby.places
-                      : searchResults
-                    : []
-                }
+                results={nav.status === 'idle' ? searchResults : []}
                 obstacles={obstacleScan.report.obstacles}
                 onSelectResult={chooseDestination}
               />

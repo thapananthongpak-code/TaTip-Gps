@@ -60,9 +60,6 @@ export const OVERPASS_MIN_INTERVAL_MS = 1000
  */
 export const OVERPASS_TIMEOUT_MS = 22000
 
-/** รัศมีค้นหาสถานที่ใกล้ตัวโดยปริยาย (เมตร) — ระยะที่คนเดินไหวใน 10 นาที */
-export const NEARBY_RADIUS_M = 800
-
 /** ระยะจากเส้นทางที่ถือว่าสิ่งกีดขวางเกี่ยวข้องกับเรา (เมตร) */
 export const OBSTACLE_CORRIDOR_M = 25
 

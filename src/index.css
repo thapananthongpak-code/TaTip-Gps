@@ -194,16 +194,12 @@ summary {
   border: 0;
 }
 
-/* ---------- ค้นหารอบตัว และรายงานสิ่งกีดขวาง ---------- */
+/* ---------- ค้นหาสถานที่ และรายงานสิ่งกีดขวาง ---------- */
 
 .search-panel,
-.nearby-panel,
 .dark .search-panel,
-.dark .nearby-panel,
 .search-panel > * + *,
-.nearby-panel > * + *,
 .search-panel h2,
-.nearby-panel h2,
 .hint,
 .disclaimer {
   font-size: 0.9rem;
@@ -284,9 +280,6 @@ summary {
   padding-left: 0.75rem;
   font-size: 1rem;
 }
-
-/* ค้นหารอบตัวไม่ใช่กล่องซ้อนกล่องอีกต่อไป — เป็นส่วนหนึ่งของแผงควบคุมหลัก */
-.primary-controls .nearby-panel,
 
 /* ---------- ปุ่มใหญ่ขึ้นและหน้าจอโล่งขึ้น ---------- */
 

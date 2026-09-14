@@ -194,6 +194,18 @@ async function setup(page: Page, options: { denial?: boolean; overpass?: Overpas
   await page.goto('/')
 }
 /** ทุกข้อความที่แอปพูดออกไปด้วยเสียงของตัวเอง */
+/**
+ * ข้อความที่ถูกส่งให้โปรแกรมอ่านหน้าจออ่าน รวมทั้งสองช่อง
+ *
+ * มีสองช่องเพราะคำเตือนเร่งด่วนต้องใช้ assertive เพื่อตัดคิวที่ค้างอยู่
+ * ส่วนข้อความทั่วไปใช้ polite จะได้ไม่ขัดจังหวะผู้ใช้ที่กำลังสำรวจหน้าจอ
+ */
+async function liveRegionText(page: Page): Promise<string> {
+  const polite = (await page.getByTestId('announcer').textContent()) ?? ''
+  const assertive = (await page.getByTestId('announcer-assertive').textContent()) ?? ''
+  return (polite + assertive).trim()
+}
+
 async function spoken(page: Page): Promise<string> {
   return (await page.evaluate(() => (window as unknown as { __said: string[] }).__said)).join(' | ')
 }
@@ -229,10 +241,13 @@ test('the app speaks with its own voice and leaves the live region empty so noth
   // แอปต้องพูดเอง ไม่ใช่เงียบ — รอได้ เพราะคำเตือนที่สำคัญกว่าตัดคิวขึ้นก่อนได้
   await expect.poll(() => spoken(page), { timeout: 15000 }).toContain('turn left')
 
-  // และ live region ต้องว่าง ไม่งั้น VoiceOver จะอ่านประโยคเดียวกันทับเสียงแอป
+  // และ live region ต้องว่างทั้งสองช่อง ไม่งั้น VoiceOver จะอ่านประโยคเดียวกันทับเสียงแอป
   await expect(page.getByTestId('announcer')).toHaveText('')
-  await expect(page.locator('[aria-live="assertive"]')).toHaveCount(0)
+  await expect(page.getByTestId('announcer-assertive')).toHaveText('')
+
+  // ช่องละหนึ่งเท่านั้น ถ้ามีซ้ำ screen reader จะอ่านแย่งกันจนจับใจความไม่ได้
   await expect(page.locator('[aria-live="polite"]')).toHaveCount(1)
+  await expect(page.locator('[aria-live="assertive"]')).toHaveCount(1)
 })
 
 test('a silent speech engine falls back to the screen reader instead of losing the message', async ({
@@ -245,7 +260,13 @@ test('a silent speech engine falls back to the screen reader instead of losing t
   expect(await spoken(page)).not.toBe('')
   // แต่เมื่อเครื่องยนต์เสียงไม่เริ่มพูด ข้อความต้องไม่หายไปเฉยๆ
   // ต้องย้ายไปอยู่ใน live region ให้โปรแกรมอ่านหน้าจออ่านแทน
-  await expect(page.getByTestId('announcer')).not.toBeEmpty({ timeout: 10000 })
+  // ช่องไหนขึ้นกับความเร่งด่วนของข้อความ เทสต์จึงยอมรับทั้งสองช่อง
+  await expect.poll(() => liveRegionText(page), { timeout: 10000 }).not.toBe('')
+
+  // แต่ต้องอยู่ช่องเดียว ไม่ใช่ทั้งสองช่อง ไม่งั้นจะถูกอ่านซ้ำสองรอบ
+  const polite = await page.getByTestId('announcer').textContent()
+  const assertive = await page.getByTestId('announcer-assertive').textContent()
+  expect(Boolean(polite?.trim()) && Boolean(assertive?.trim())).toBe(false)
 })
 test('navigation pauses for poor GPS and suppresses walking instructions', async ({ page }) => {
   await setup(page)

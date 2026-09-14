@@ -66,7 +66,7 @@ npm run preview
 
 แอปมีสิ่งที่กดได้ไม่กี่อย่าง และทุกอย่างใหญ่
 
-- แผ่นกดหมวดหมู่สูง 92px ปุ่มระดับหน้าเต็มความกว้างสูง 64px รายการผลลัพธ์สูง 80px — ทั้งหมดใหญ่กว่าเกณฑ์ขั้นต่ำของ WCAG (48px) มาก เพราะผู้ใช้แตะโดยไม่เห็นตำแหน่งปุ่ม การกดพลาดไม่ใช่แค่ความรำคาญแต่หมายถึงเดินผิดทาง
+- ปุ่มระดับหน้าเต็มความกว้างสูง 64px รายการผลลัพธ์สูง 80px — ทั้งหมดใหญ่กว่าเกณฑ์ขั้นต่ำของ WCAG (48px) มาก เพราะผู้ใช้แตะโดยไม่เห็นตำแหน่งปุ่ม การกดพลาดไม่ใช่แค่ความรำคาญแต่หมายถึงเดินผิดทาง
 - หน้าแรกมีสิ่งที่ต้องทำอยู่อย่างเดียวคือพิมพ์ชื่อที่จะไป แล้วกดค้นหา
 - **ระหว่างนำทาง หน้าจอแสดงเฉพาะคำแนะนำถัดไปกับปุ่มพูดซ้ำและหยุดนำทาง** ช่องค้นหาหายไปทั้งหมด
 - **ไม่มีหน้าตั้งค่า** ธีมตามการตั้งค่าของเครื่อง และขนาดตัวอักษรฐานตั้งไว้ใหญ่กว่าเว็บทั่วไปโดยทุกขนาดใช้หน่วย rem การตั้งขนาดตัวอักษรของเบราว์เซอร์จึงขยายทั้งแอปได้เอง
@@ -167,24 +167,21 @@ Photon คืนทางเท้าและอาคารที่ชื่�
 >
 > การจัดอันดับยังผิดได้เมื่อ Nominatim เจอผลลัพธ์ที่ "ผิดตัว" เช่น "รพ.รามา" ได้ "สะพานพระราม 8" — เพราะเจอผลแล้วจึงไม่เข้าเงื่อนไขถอยไปใช้ตัวสำรอง ทั้งสองบริการไม่มีการให้คะแนนความใกล้เคียงที่เอามาเทียบกันได้ ถ้าต้องการความทนทานระดับที่ผู้ใช้ทั่วไปคาดหวัง ต้องใช้ Places Autocomplete — ดูหัวข้อ **ถ้าจะเปลี่ยนไปใช้ Google**
 
-## ค้นหารอบตัวตามหมวด
+### ทำไมไม่มีปุ่ม "ค้นหารอบตัว"
 
-8 หมวด: รถเมล์/รถไฟฟ้า · ร้านสะดวกซื้อ · ห้องน้ำ · ร้านอาหาร · ร้านขายยา · โรงพยาบาล · ธนาคาร/เอทีเอ็ม · ราชการ/ตำรวจ
+เคยมีปุ่มหมวดหมู่ 8 หมวด (รถเมล์/รถไฟฟ้า · ร้านสะดวกซื้อ · ห้องน้ำ · ร้านอาหาร · ร้านขายยา · โรงพยาบาล · ธนาคาร · ราชการ) แล้ว**ถอดออกแล้ว** เหลือเฉพาะการค้นด้วยชื่อ
 
-สำหรับผู้ใช้ที่มองป้ายร้านไม่เห็น จึงไม่รู้ว่ารอบตัวมีอะไรให้เอาชื่อไปพิมพ์ค้นหา ปุ่มหมวดหมู่เปลี่ยนคำถามเป็น "รอบตัวฉันมีอะไรบ้าง"
+เหตุผลหลักคือการตัดสินใจเรื่องขอบเขต: แอปนี้โฟกัสสองอย่างคือค้นหาสถานที่ให้เจอ และนำทางด้วยเสียงให้ถูกต้อง ทุกอย่างที่ไม่ได้รับใช้สองเรื่องนี้ถูกตัดออกเพื่อให้หน้าจอเหลือเฉพาะสิ่งที่ต้องใช้จริง
 
-- **ดึงทุกหมวดในคำขอเดียว** แล้วกรองในเครื่อง กดหมวดแรกใช้เวลาประมาณ 2 วินาที หมวดถัดไปตอบทันทีจาก cache
-  เดิมยิงแยกทีละหมวดตามที่กด ซึ่งพังเพราะ Overpass ตอบ 429 ตั้งแต่หมวดที่สาม
-- **ขยายรัศมีเองอัตโนมัติ 800 เมตร ไป 2.5 และ 6 กิโลเมตร** ถ้ายังไม่เจอ
-  ขั้นสุดท้ายไกลเกินกว่าจะเดินไหว แต่ยังมีประโยชน์เพราะบอกได้ว่าสิ่งที่ใกล้ที่สุดอยู่ไกลแค่ไหน ช่วยให้ตัดสินใจเรียกรถแทนได้ ดีกว่าบอกว่าไม่พบเฉยๆ
-- สถานที่ที่ไม่มีชื่อใน OSM (ตู้เอทีเอ็ม ห้องน้ำ ป้ายรถเมล์) ใช้ชื่อหมวดแทน ไม่ปล่อยว่างจนกลายเป็นปุ่มที่ screen reader อ่านไม่ได้
-- ผลลัพธ์ปักหมุดบนแผนที่ มีเลขกำกับตรงกับลำดับในรายการ
+และข้อมูลที่วัดได้ก็ไม่สนับสนุนให้เก็บไว้:
 
-> ### ⚠️ ข้อมูล OSM ในไทยนอกใจกลางเมืองบางมาก
+> #### ⚠️ ข้อมูล POI ใน OSM นอกใจกลางเมืองบางมาก
 >
 > วัดจริงในรัศมี 800 เมตร: ย่านสยามเจอร้านสะดวกซื้อ 30 แห่ง ร้านขายยา 5 แห่ง ห้องน้ำ 19 แห่ง แต่แถววัดพระศรีมหาธาตุและบางนาเจอร้านสะดวกซื้อ 5-6 แห่ง และ **ร้านขายยา โรงพยาบาล ห้องน้ำ เจอศูนย์แห่ง**
 >
-> ไม่ใช่ข้อผิดพลาดของโค้ดหรือของ API แต่เป็นเพราะ OSM เป็นข้อมูลอาสาสมัคร การขยายรัศมีอัตโนมัติช่วยได้บางส่วนแต่แก้ที่ต้นเหตุไม่ได้
+> ไม่ใช่ข้อผิดพลาดของโค้ดหรือของ API แต่เป็นเพราะ OSM เป็นข้อมูลอาสาสมัคร ปุ่มที่กดแล้วได้ศูนย์รายการทั้งที่ในความจริงมีร้านอยู่ แย่กว่าการไม่มีปุ่มนั้นเลย เพราะผู้ใช้ที่มองไม่เห็นจะสรุปว่า "แถวนี้ไม่มีร้านขายยา"
+
+ถ้าจะทำฟีเจอร์นี้ให้ใช้ได้จริงทั่วประเทศ ต้องเปลี่ยนไปใช้ Google Places — ดูหัวข้อ **ถ้าจะเปลี่ยนไปใช้ Google**
 
 ## ตรวจสิ่งกีดขวางบนเส้นทาง
 
@@ -280,7 +277,7 @@ Nominatim จับคำแบบตรงตัว คำที่คนพู
 - ตอบช้ากว่า Nominatim มาก (1-5 วินาที) จึงบอกด้วยเสียงว่ากำลังค้นหาอยู่
 - ใช้เฉพาะ mirror ที่ตรวจสอบที่มาได้ เพราะคำขอแต่ละครั้งมีพิกัดของผู้ใช้ติดไปด้วย
 - ลดจุดของเส้นทางก่อนส่ง (เว้นระยะ และไม่เกิน 60 จุด) เพื่อไม่ให้ URL ยาวเกินและเซิร์ฟเวอร์ทำงานหนักเกินจำเป็น
-- เมื่อทุก mirror ล่ม การค้นรอบตัวและการตรวจสิ่งกีดขวางจะรายงานว่าใช้ไม่ได้ ส่วนการค้นด้วยชื่อและการนำทางยังทำงานตามปกติ
+- เมื่อทุก mirror ล่ม การตรวจสิ่งกีดขวางจะรายงานว่าใช้ไม่ได้ ส่วนการค้นด้วยชื่อและการนำทางยังทำงานตามปกติ
 
 ### Map tiles / PWA
 
@@ -297,7 +294,7 @@ Service worker ไม่อัปเดตอัตโนมัติระห�
 | ด้าน | ปัจจุบัน (ฟรี) | Google | สรุป |
 | --- | --- | --- | --- |
 | ค้นด้วยชื่อ | Nominatim + Photon — เจอ 14/14 คำทดสอบ แต่การจัดอันดับยังผิดตัวได้ | Places Autocomplete — ทนต่อการพิมพ์ผิดและจัดอันดับดีกว่า | Google ดีกว่า แต่ช่องว่างแคบลงมาก |
-| ข้อมูล POI ในไทย | OSM — ดีเฉพาะใจกลางเมือง ชานเมืองแทบว่าง | Places API — ธุรกิจลงทะเบียนเอง ครอบคลุมทั่วประเทศ | **Google ดีกว่าชัดเจน** |
+| ข้อมูล POI ในไทย | OSM — ดีเฉพาะใจกลางเมือง ชานเมืองแทบว่าง (เป็นเหตุผลที่ถอดปุ่มค้นหารอบตัวออก) | Places API — ธุรกิจลงทะเบียนเอง ครอบคลุมทั่วประเทศ | **Google ดีกว่าชัดเจน** |
 | เวลาเปิด/ปิด สถานะ | ไม่มี | มี | **Google ดีกว่า** |
 | เส้นทางเดินเท้า | OSRM FOSSGIS — ใช้ทางเท้าจริง | Directions API walking | ใกล้เคียงกัน |
 | คำสั่งเลี้ยวภาษาไทย | สร้างเองจากข้อมูลเส้นทาง | มีให้เป็นประโยคไทยสำเร็จ | Google สะดวกกว่า |
@@ -392,23 +389,26 @@ Google Maps Platform ให้โควตาเรียกฟรีต่อ�
 // api/places.ts — คีย์อยู่ใน environment variable ของ Vercel ไม่เคยออกไปถึงเบราว์เซอร์
 export default async function handler(request: Request) {
   const { searchParams } = new URL(request.url)
-  const response = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+  const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': process.env.GOOGLE_MAPS_KEY!,
-      'X-Goog-FieldMask': 'places.displayName,places.location,places.formattedAddress',
+      // ขอเฉพาะฟิลด์ที่ใช้จริง ยิ่งขอมากยิ่งขึ้นชั้นราคาที่แพงขึ้น
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.location,places.formattedAddress',
     },
     body: JSON.stringify({
-      includedTypes: [searchParams.get('type')],
-      maxResultCount: 12,
-      locationRestriction: {
+      textQuery: searchParams.get('q'),
+      languageCode: searchParams.get('lang') ?? 'th',
+      maxResultCount: 8,
+      // จัดอันดับผลที่อยู่ใกล้ผู้ใช้ก่อน แต่ไม่ตัดผลที่อยู่ไกลทิ้ง
+      locationBias: {
         circle: {
           center: {
             latitude: Number(searchParams.get('lat')),
             longitude: Number(searchParams.get('lng')),
           },
-          radius: Number(searchParams.get('radius')),
+          radius: 20000,
         },
       },
     }),
@@ -422,31 +422,27 @@ export default async function handler(request: Request) {
 **2. เขียน implementation ใหม่** ที่ implement interface เดิม แปลงข้อมูลของ Google เป็นไทป์กลางของแอป
 
 ```ts
-// src/services/impl/googlePlacesService.ts
-import type { NearbyOptions, PlacesService } from '@/services/interfaces'
-import type { LatLng, Place, PlaceCategory } from '@/types'
+// src/services/impl/googleGeocodingService.ts
+import { ServiceError } from '@/types'
+import type { GeocodingService, SearchOptions } from '@/services/interfaces'
+import type { LatLng, Place } from '@/types'
 
-/** หมวดของแอป -> ชนิดสถานที่ของ Google */
-const GOOGLE_TYPES: Record<PlaceCategory, string> = {
-  transit: 'transit_station',
-  convenience: 'convenience_store',
-  food: 'restaurant',
-  pharmacy: 'pharmacy',
-  hospital: 'hospital',
-  bank: 'bank',
-  toilets: 'public_bathroom',
-  government: 'local_government_office',
+interface GooglePlace {
+  id: string
+  displayName?: { text: string }
+  formattedAddress?: string
+  location: { latitude: number; longitude: number }
 }
 
-export const googlePlacesService: PlacesService = {
-  async findNearby(category, center: LatLng, options: NearbyOptions = {}): Promise<Place[]> {
-    const params = new URLSearchParams({
-      type: GOOGLE_TYPES[category],
-      lat: String(center.lat),
-      lng: String(center.lng),
-      radius: String(options.radiusM ?? 800),
-    })
+export const googleGeocodingService: GeocodingService = {
+  async search(query: string, options: SearchOptions = {}): Promise<Place[]> {
+    const params = new URLSearchParams({ q: query, lang: options.language ?? 'th' })
+    if (options.near) {
+      params.set('lat', String(options.near.lat))
+      params.set('lng', String(options.near.lng))
+    }
     const response = await fetch(`/api/places?${params}`, { signal: options.signal })
+    if (!response.ok) throw new ServiceError('PROVIDER_ERROR', String(response.status))
     const data = await response.json()
 
     return (data.places ?? []).map((place: GooglePlace) => ({
@@ -454,8 +450,12 @@ export const googlePlacesService: PlacesService = {
       name: place.displayName?.text ?? '',
       address: place.formattedAddress ?? '',
       location: { lat: place.location.latitude, lng: place.location.longitude },
-      categoryKey: category,
     }))
+  },
+
+  async reverse(location: LatLng, options: SearchOptions = {}): Promise<Place | null> {
+    // ใช้ Geocoding API ซึ่งเป็นคนละตัวกับ Places — ทำ proxy อีกตัวแบบเดียวกัน
+    throw new ServiceError('UNKNOWN', 'ยังไม่ได้ทำ')
   },
 }
 ```
@@ -463,13 +463,13 @@ export const googlePlacesService: PlacesService = {
 **3. สลับที่ composition root บรรทัดเดียว**
 
 ```diff
-- export const placesService: PlacesService = overpassPlacesService
-+ export const placesService: PlacesService = googlePlacesService
+- export const geocodingService: GeocodingService = compositeGeocodingService
++ export const geocodingService: GeocodingService = googleGeocodingService
 ```
 
 ส่วนอื่นของแอปทั้งหมด — hook, component, การประกาศเสียง, การนำทาง — **ไม่ต้องแก้อะไรเลย** เพราะทำงานกับไทป์กลาง (`Place`, `Route`) ไม่ได้ผูกกับรูปร่างข้อมูลของผู้ให้บริการรายใด
 
-ทำแบบเดียวกันได้กับ `GeocodingService` (ค้นด้วยชื่อ) และ `RoutingService` (เส้นทาง)
+ทำแบบเดียวกันได้กับ `RoutingService` (เส้นทางเดินเท้า) และ `ObstacleService` (สิ่งกีดขวาง)
 
 ### คำแนะนำ
 
@@ -486,7 +486,7 @@ export const googlePlacesService: PlacesService = {
 | GPS และเส้นทางระหว่างใช้ | หน่วยความจำในแอป ไม่สร้างประวัติเส้นทางถาวร |
 | คำค้น/ตำแหน่งที่ reverse | ส่งให้ Nominatim และส่งให้ Photon ด้วยเมื่อ Nominatim ไม่เจอ; ผล cache ในหน่วยความจำ 10 นาที |
 | ต้นทางและปลายทางที่ขอเส้นทาง | ส่งให้ FOSSGIS |
-| ตำแหน่งที่ค้นรอบตัว และแนวเส้นทางที่สแกนสิ่งกีดขวาง | ส่งให้ Overpass mirror ที่ใช้อยู่; ผล cache ในหน่วยความจำ 30 นาที |
+| แนวเส้นทางที่สแกนสิ่งกีดขวาง | ส่งให้ Overpass mirror ที่ใช้อยู่; ผล cache ในหน่วยความจำ 30 นาที |
 | Tiles ที่เปิดดู | ผู้ให้บริการทราบพื้นที่ที่ร้องขอ/IP; browser/cache อาจบอกพื้นที่ที่เคยดู |
 | ภาษาที่เลือก | localStorage บนเครื่อง (เป็นข้อมูลเดียวที่แอปเก็บถาวร) |
 | เสียง | แอปสังเคราะห์เสียงด้วย SpeechSynthesis ของเบราว์เซอร์ หรือให้โปรแกรมอ่านหน้าจอของระบบอ่าน ไม่มีเสียงถูกส่งออกจากเครื่อง |
