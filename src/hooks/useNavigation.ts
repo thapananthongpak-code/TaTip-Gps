@@ -24,6 +24,15 @@ export interface UseNavigationResult {
   progress: NavigationProgress | null
   error: ServiceError | null
   isOffRoute: boolean
+  /**
+   * true = ระยะถึงจุดหมายเพิ่มขึ้นต่อเนื่อง แปลว่ากำลังเดินห่างออกไป
+   *
+   * ต่างจาก isOffRoute อย่างสิ้นเชิงและต้องมีทั้งคู่:
+   * isOffRoute ดูว่า "ห่างจากแนวเส้นทางกี่เมตร" ซึ่งจับการหันกลับเดินย้อน
+   * บนถนนเส้นเดิมไม่ได้เลย เพราะตอนนั้นยังอยู่บนเส้นทางพอดี ระยะห่างเป็นศูนย์
+   * ทดสอบแล้วพบว่าเดินย้อนกลับได้ถึง 450 เมตรโดยที่แอปไม่เคยเอ่ยอะไรเลย
+   */
+  isMovingAway: boolean
   isRecalculating: boolean
   /**
    * ระยะจากจุดที่ประกาศว่าถึงแล้ว ไปยังพิกัดจุดหมายจริง (เมตร)
@@ -46,6 +55,20 @@ const OFF_ROUTE_STREAK = 2
  * เพราะจะกลายเป็นยิงคำนวณเส้นทางใหม่รัวๆ ทั้งที่ผู้ใช้เดินถูกทางอยู่
  */
 const OFF_ROUTE_MAX_ACCURACY_M = 30
+/**
+ * ต้องเห็นระยะที่เหลือ "เพิ่มขึ้น" ติดกันกี่ครั้งถึงจะเชื่อว่าเดินผิดทาง
+ *
+ * ต้องมีหลายครั้งเพราะ GPS แกว่งทำให้ระยะขยับขึ้นลงได้เองโดยผู้ใช้ยืนนิ่ง
+ */
+const AWAY_STREAK = 3
+/**
+ * ระยะที่เหลือต้องเพิ่มขึ้นรวมกันกี่เมตรถึงจะเชื่อ
+ *
+ * ตั้งให้ใหญ่กว่าความแกว่งปกติของ GPS ในเมือง แต่เล็กพอที่จะจับได้
+ * ก่อนผู้ใช้จะเดินผิดทางไปไกลจนต้องย้อนกลับนาน
+ */
+const AWAY_DISTANCE_M = 25
+
 /** เว้นระยะระหว่างการคำนวณเส้นทางใหม่ เพื่อไม่ให้ยิง OSRM ถี่เกินไป */
 const MIN_RECALC_INTERVAL_MS = 30_000
 /**
@@ -75,6 +98,7 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
   const [progress, setProgress] = useState<NavigationProgress | null>(null)
   const [error, setError] = useState<ServiceError | null>(null)
   const [isOffRoute, setIsOffRoute] = useState(false)
+  const [isMovingAway, setIsMovingAway] = useState(false)
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [retryAttempt, setRetryAttempt] = useState(0)
   const [arrivalOffset, setArrivalOffset] = useState<number | null>(null)
@@ -89,6 +113,9 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
   const offRouteStreakRef = useRef(0)
   const lastRecalcAtRef = useRef(0)
   const lastProcessedFix = useRef(0)
+  // ระยะที่เหลือครั้งล่าสุดที่ "ลดลง" ใช้เป็นฐานวัดว่าหลังจากนั้นเพิ่มขึ้นไปเท่าไร
+  const bestRemainingRef = useRef(Infinity)
+  const awayStreakRef = useRef(0)
   const [manualStep, setManualStep] = useState(0)
 
   const calculate = useCallback(async (origin: GeoPosition, place: Place, isRecalc: boolean) => {
@@ -114,8 +141,11 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
 
       stepIndexRef.current = 0
       offRouteStreakRef.current = 0
+      bestRemainingRef.current = Infinity
+      awayStreakRef.current = 0
       lastRecalcAtRef.current = Date.now()
       setRoute(result)
+      setIsMovingAway(false)
       setIsOffRoute(false)
       setStatus('navigating')
     } catch (err) {
@@ -159,12 +189,15 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
     setProgress(null)
     setError(null)
     setIsOffRoute(false)
+    setIsMovingAway(false)
     setIsRecalculating(false)
     setArrivalOffset(null)
     setRetryAttempt(0)
     lastProcessedFix.current = 0
     stepIndexRef.current = 0
     offRouteStreakRef.current = 0
+    bestRemainingRef.current = Infinity
+    awayStreakRef.current = 0
   }, [])
 
   const retry = useCallback(() => {
@@ -188,6 +221,21 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
       remainingDistance: result.remainingDistance,
       remainingDuration: result.remainingDuration,
     })
+
+    /*
+     * เทียบระยะที่เหลือกับค่าที่ดีที่สุดที่เคยทำได้ ไม่ใช่กับค่าครั้งก่อนหน้า
+     *
+     * ถ้าเทียบกับครั้งก่อน การเดินผิดทางช้าๆ จะถูกมองเป็นการแกว่งของ GPS ทีละนิด
+     * แต่การเทียบกับค่าที่ดีที่สุดทำให้เห็นภาพรวมว่าห่างจากจุดหมายขึ้นเรื่อยๆ จริง
+     */
+    if (result.remainingDistance < bestRemainingRef.current) {
+      bestRemainingRef.current = result.remainingDistance
+      awayStreakRef.current = 0
+      setIsMovingAway(false)
+    } else if (result.remainingDistance > bestRemainingRef.current + AWAY_DISTANCE_M) {
+      awayStreakRef.current += 1
+      if (awayStreakRef.current >= AWAY_STREAK) setIsMovingAway(true)
+    }
 
     if (result.hasArrived && position.accuracy <= ARRIVAL_MAX_ACCURACY_M) {
       setArrivalOffset(result.distanceToDestination)
@@ -244,6 +292,7 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
     progress: usable && !isRecalculating ? progress : null,
     error,
     isOffRoute,
+    isMovingAway,
     isRecalculating,
     arrivalOffset,
     retryAttempt,

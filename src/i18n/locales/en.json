@@ -89,7 +89,9 @@
     "confirmTurn": "Confirm I have passed this turn",
     "safetyNote": "Use with a cane or guide dog. This app cannot detect vehicles, obstacles or crossing signals, or tell you it is safe to cross. Keep this app in the foreground while walking; switching to another app stops guidance.",
     "finishButton": "Finish trip",
-    "finishedSpoken": "Trip finished. Ready to search for a new destination."
+    "finishedSpoken": "Trip finished. Ready to search for a new destination.",
+    "movingAway": "You may be walking away from your destination",
+    "movingAwaySpoken": "You seem to be walking away from your destination. Please stop somewhere safe, then press Repeat instruction to hear the way again."
   },
   "whereAmI": {
     "button": "Where am I?",

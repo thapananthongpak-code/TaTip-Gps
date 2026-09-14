@@ -1,9 +1,10 @@
 import { NOMINATIM_BASE_URL, NOMINATIM_MIN_INTERVAL_MS } from '@/services/config'
 import type { GeocodingService, SearchOptions } from '@/services/interfaces'
 import { ServiceError } from '@/types'
-import type { LatLng, Place } from '@/types'
+import type { LatLng, Place, ServiceLanguage } from '@/types'
 import { createTtlCache } from '@/utils/cache'
 import { queryVariants } from '@/utils/query'
+import { addressForLanguage } from '@/utils/script'
 import { fetchJson } from './httpClient'
 import { createRateLimiter } from './requestQueue'
 
@@ -29,7 +30,7 @@ const schedule = createRateLimiter(NOMINATIM_MIN_INTERVAL_MS)
 /** ปัดพิกัดให้หยาบลง (~11 เมตร) เพื่อให้ตำแหน่งใกล้ๆ กันใช้ cache ร่วมกันได้ */
 const coordKey = (p: LatLng) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`
 
-function toPlace(raw: NominatimPlace): Place {
+function toPlace(raw: NominatimPlace, language: ServiceLanguage): Place {
   if (
     !raw ||
     typeof raw.display_name !== 'string' ||
@@ -44,7 +45,8 @@ function toPlace(raw: NominatimPlace): Place {
   return {
     id: String(raw.place_id),
     name: shortName,
-    address: raw.display_name,
+    // ตัดส่วนของที่อยู่ที่เป็นคนละภาษาออก ไม่งั้นที่อยู่อังกฤษจะมีคำไทยแทรกกลาง
+    address: addressForLanguage(raw.display_name, language),
     location: { lat: Number(raw.lat), lng: Number(raw.lon) },
     category: raw.type ?? raw.category,
     boundingBox: raw.boundingbox
@@ -96,7 +98,7 @@ export const nominatimGeocodingService: GeocodingService = {
     })
     if (!Array.isArray(raw)) throw new ServiceError('PROVIDER_ERROR')
 
-    let places = raw.map(toPlace)
+    let places = raw.map((item) => toPlace(item, language))
 
     // ไม่เจออะไรเลย ลองรูปแบบอื่นของคำค้นทีละแบบก่อนจะยอมแพ้
     // ยิงเพิ่มเฉพาะตอนที่ผลว่างจริงๆ เท่านั้น จึงไม่เพิ่มภาระให้ Nominatim ในกรณีปกติ
@@ -110,7 +112,7 @@ export const nominatimGeocodingService: GeocodingService = {
           schedule,
         })
         if (Array.isArray(retry) && retry.length > 0) {
-          places = retry.map(toPlace)
+          places = retry.map((item) => toPlace(item, language))
           break
         }
       }
@@ -145,7 +147,7 @@ export const nominatimGeocodingService: GeocodingService = {
     )
 
     if (!raw || typeof raw !== 'object') throw new ServiceError('PROVIDER_ERROR')
-    const place = 'error' in raw ? null : toPlace(raw)
+    const place = 'error' in raw ? null : toPlace(raw, language)
     reverseCache.set(cacheKey, place)
     return place
   },

@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
+import { currentLanguage } from '@/i18n'
 import type { RouteStep } from '@/types'
 import { speakDistance } from '@/utils/format'
 import { ARRIVAL_RADIUS_M } from '@/utils/navigation'
+import { speakableStreet } from '@/utils/script'
 import type { UseNavigationResult } from './useNavigation'
 import { useSpeech } from './useSpeech'
 
@@ -41,12 +43,10 @@ function instructionFor(t: TFunction, step: RouteStep, distance: number): string
     return t('nav.approaching', { distance: speakDistance(distance), maneuver })
   }
   // แยกคีย์ตามว่ามีชื่อถนนหรือไม่ เพราะโครงประโยคของสองภาษาต่างกัน
-  return step.streetName
-    ? t('nav.stepInstructionWithStreet', {
-        distance: speakDistance(distance),
-        maneuver,
-        street: step.streetName,
-      })
+  // ข้ามชื่อถนนที่เป็นคนละภาษากับที่ผู้ใช้เลือก ไม่งั้นประโยคจะปนสองภาษา
+  const street = speakableStreet(step.streetName, currentLanguage())
+  return street
+    ? t('nav.stepInstructionWithStreet', { distance: speakDistance(distance), maneuver, street })
     : t('nav.stepInstruction', { distance: speakDistance(distance), maneuver })
 }
 
@@ -190,6 +190,22 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
       )
     }
   }, [enabled, nav.status, nav.destination, nav.arrivalOffset, speak, t])
+
+  /*
+   * 4.5) เดินห่างจากจุดหมายเรื่อยๆ
+   *
+   * ต่างจากการออกนอกเส้นทาง และต้องมีทั้งคู่ เพราะการหันกลับเดินย้อนบนถนนเส้นเดิม
+   * ทำให้ยังอยู่บนเส้นทางพอดี ระบบตรวจออกนอกเส้นทางจึงไม่มีทางจับได้เลย
+   * ทดสอบแล้วพบว่าเดินย้อนได้ถึง 450 เมตรโดยแอปไม่เคยเอ่ยอะไร
+   */
+  useEffect(() => {
+    if (!enabled || !nav.isMovingAway || nav.suspended || nav.isOffRoute) return
+
+    const warn = () => speak(t('nav.movingAwaySpoken'), { priority: 'critical' })
+    warn()
+    const timer = setInterval(warn, OFF_ROUTE_REPEAT_MS)
+    return () => clearInterval(timer)
+  }, [enabled, nav.isMovingAway, nav.suspended, nav.isOffRoute, speak, t])
 
   // 5) ออกนอกเส้นทาง — เตือนทันที แล้วย้ำเป็นระยะจนกว่าจะกลับเข้าเส้นทาง
   useEffect(() => {

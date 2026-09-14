@@ -23,9 +23,11 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useSpeech } from '@/hooks/useSpeech'
 import { useWakeLock } from '@/hooks/useWakeLock'
 import { useWhereAmI } from '@/hooks/useWhereAmI'
+import { currentLanguage } from '@/i18n'
 import { speechService } from '@/services'
 import type { Place } from '@/types'
 import { speakDistance } from '@/utils/format'
+import { speakableStreet } from '@/utils/script'
 import { vibrate } from '@/utils/vibration'
 
 /** ระยะที่เริ่มสั่นเตือนก่อนถึงจุดเลี้ยว (เมตร) — ตรงกับจังหวะที่เสียงเตือนดัง */
@@ -180,11 +182,12 @@ export default function App() {
     }
     const step = nav.progress?.nextStep
     if (step && nav.progress) {
+      const street = speakableStreet(step.streetName, currentLanguage())
       speak(
-        t(step.streetName ? 'nav.stepInstructionWithStreet' : 'nav.stepInstruction', {
+        t(street ? 'nav.stepInstructionWithStreet' : 'nav.stepInstruction', {
           distance: speakDistance(nav.progress.distanceToNextManeuver),
           maneuver: t('maneuver.' + step.maneuver),
-          street: step.streetName,
+          street,
         }),
         { group: 'navigation', priority: 'critical' },
       )

@@ -1,8 +1,10 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
+import { currentLanguage } from '@/i18n'
 import type { UseNavigationResult } from '@/hooks/useNavigation'
 import { formatDistance, speakDistance } from '@/utils/format'
 import { ARRIVAL_RADIUS_M } from '@/utils/navigation'
+import { speakableStreet } from '@/utils/script'
 import { BigButton } from './BigButton'
 
 /** ประโยคคำแนะนำที่แสดงบนจอ — โครงเดียวกับที่พูดออกเสียง เพื่อไม่ให้สองทางไม่ตรงกัน */
@@ -11,8 +13,10 @@ function instructionText(t: TFunction, progress: NonNullable<UseNavigationResult
   if (!step) return ''
   const maneuver = t(`maneuver.${step.maneuver}`)
   const distance = speakDistance(progress.distanceToNextManeuver)
-  return step.streetName
-    ? t('nav.stepInstructionWithStreet', { distance, maneuver, street: step.streetName })
+  // ต้องกรองชื่อถนนแบบเดียวกับที่เสียงพูด ไม่งั้นจอกับเสียงจะไม่ตรงกัน
+  const street = speakableStreet(step.streetName, currentLanguage())
+  return street
+    ? t('nav.stepInstructionWithStreet', { distance, maneuver, street })
     : t('nav.stepInstruction', { distance, maneuver })
 }
 
@@ -79,6 +83,12 @@ export function NavigationPanel({ nav, onRepeat, onFinish }: Props) {
             ? t('nav.recalculating')
             : !isOffRoute && progress?.nextStep && instructionText(t, progress))}
       </p>
+
+      {nav.isMovingAway && !isOffRoute && status === 'navigating' && (
+        <p className="mt-1 text-base font-bold text-danger-600 dark:text-red-300">
+          {t('nav.movingAway')}
+        </p>
+      )}
 
       {isOffRoute && status === 'navigating' && (
         <p className="mt-1 text-base font-bold text-danger-600 dark:text-red-300">

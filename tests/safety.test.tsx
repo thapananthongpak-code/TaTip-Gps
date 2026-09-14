@@ -186,3 +186,123 @@ it('ไม่พังบนเบราว์เซอร์ที่ไม่�
   await act(() => vi.advanceTimersByTimeAsync(1))
   vi.unstubAllGlobals()
 })
+
+/* ---------- ตรวจว่ากำลังเดินห่างจากจุดหมาย ---------- */
+
+const ORIGIN = { lat: 13.7455, lng: 100.5341 }
+const FAR_END = { lat: 13.7455, lng: 100.5431 } // ตรงไปทางตะวันออก ~970 ม.
+const farPlace: Place = { id: 'far', name: 'ปลายทาง', address: '', location: FAR_END }
+const longRoute = {
+  id: 'r-long',
+  distance: 970,
+  duration: 780,
+  geometry: [ORIGIN, FAR_END],
+  destination: farPlace,
+  origin: ORIGIN,
+  steps: [
+    {
+      id: '0',
+      maneuver: 'depart',
+      location: ORIGIN,
+      distance: 970,
+      duration: 780,
+      geometry: [ORIGIN, FAR_END],
+    },
+    {
+      id: '1',
+      maneuver: 'arrive',
+      location: FAR_END,
+      distance: 0,
+      duration: 0,
+      geometry: [FAR_END],
+    },
+  ],
+} as unknown as Route
+
+/** ตำแหน่งที่ระยะ m เมตรจากจุดเริ่มต้น ไปตามแนวเส้นทาง */
+const along = (m: number, accuracy = 5, jitterM = 0): GeoPosition => ({
+  lat: ORIGIN.lat + jitterM * 0.000009,
+  lng: ORIGIN.lng + m * 0.00000922,
+  accuracy,
+  heading: null,
+  speed: null,
+  timestamp: 100000 + m,
+})
+
+async function walkThrough(points: GeoPosition[]) {
+  mocks.route.mockResolvedValue(longRoute)
+  const { result, rerender } = renderHook(({ p }) => useNavigation(p, true), {
+    initialProps: { p: along(0) },
+  })
+  act(() => result.current.start(farPlace))
+  await act(() => vi.advanceTimersByTimeAsync(10))
+  const flags: boolean[] = []
+  for (const point of points) {
+    rerender({ p: point })
+    await act(() => vi.advanceTimersByTimeAsync(1))
+    flags.push(result.current.isMovingAway)
+  }
+  return flags
+}
+
+/*
+ * การเตือนผิดอันตรายพอๆ กับการไม่เตือน
+ * ถ้าแอปบอกว่า "กำลังเดินห่างจากจุดหมาย" ทั้งที่เดินถูกทาง ผู้ใช้จะหยุดกลางทาง
+ * และเลิกเชื่อคำเตือนนั้นในครั้งต่อไป ซึ่งทำให้คำเตือนที่ถูกต้องไร้ความหมายไปด้วย
+ */
+it('เดินถูกทางต่อเนื่อง ต้องไม่เตือนเลยแม้แต่ครั้งเดียว', async () => {
+  const flags = await walkThrough([50, 100, 150, 200, 300, 400, 500].map((m) => along(m)))
+  expect(flags.some(Boolean)).toBe(false)
+})
+
+/** GPS ในเมืองแกว่งตลอดเวลา ความแกว่งต้องไม่ถูกตีความว่าเดินผิดทาง */
+it('เดินถูกทางแต่ GPS แกว่งข้างทาง ก็ต้องไม่เตือน', async () => {
+  const jitter = [10, -12, 8, -15, 11, -9, 13]
+  const flags = await walkThrough(
+    [40, 80, 120, 160, 200, 240, 280].map((m, i) => along(m, 20, jitter[i])),
+  )
+  expect(flags.some(Boolean)).toBe(false)
+})
+
+/** ยืนนิ่งรอข้ามถนนหรือรอคนช่วย ไม่ใช่การเดินผิดทาง */
+it('ยืนอยู่กับที่ ต้องไม่เตือน', async () => {
+  const flags = await walkThrough(Array.from({ length: 8 }, () => along(200, 15)))
+  expect(flags.some(Boolean)).toBe(false)
+})
+
+/*
+ * กรณีที่ระบบตรวจออกนอกเส้นทางจับไม่ได้เลย
+ * หันกลับเดินย้อนบนถนนเส้นเดิม ระยะห่างจากเส้นทางยังเป็นศูนย์ตลอด
+ * วัดแล้วเดินย้อนได้ถึง 450 เมตรโดยแอปไม่เคยเอ่ยอะไร
+ */
+it('หันกลับเดินย้อนบนเส้นทางเดิม ต้องเตือน', async () => {
+  const flags = await walkThrough([500, 450, 400, 350, 300].map((m) => along(m)))
+  expect(flags.at(-1)).toBe(true)
+  expect(flags.filter(Boolean).length).toBeGreaterThan(0)
+})
+
+/** เดินผิดทางตั้งแต่ก้าวแรก ต้องจับได้โดยไม่ต้องรอให้ไปไกล */
+it('เดินผิดทางตั้งแต่ต้น จับได้ภายในระยะที่ยังเดินกลับไหว', async () => {
+  const back = (m: number): GeoPosition => ({
+    lat: ORIGIN.lat,
+    lng: ORIGIN.lng - m * 0.00000922,
+    accuracy: 5,
+    heading: null,
+    speed: null,
+    timestamp: 100000 + m,
+  })
+  const flags = await walkThrough([10, 20, 30, 40, 50].map(back))
+  const firstWarn = flags.indexOf(true)
+  expect(firstWarn).toBeGreaterThanOrEqual(0)
+  // ต้องเตือนก่อนเดินผิดทางเกิน 50 เมตร
+  expect([10, 20, 30, 40, 50][firstWarn]).toBeLessThanOrEqual(50)
+})
+
+/** กลับเข้าทางถูกแล้วต้องเลิกเตือน ไม่ค้างเตือนไปตลอดทาง */
+it('กลับมาเดินถูกทาง ต้องเลิกเตือน', async () => {
+  const flags = await walkThrough([
+    ...[500, 450, 400, 350, 300].map((m) => along(m)),
+    ...[350, 420, 500, 600].map((m) => along(m)),
+  ])
+  expect(flags.at(-1)).toBe(false)
+})
