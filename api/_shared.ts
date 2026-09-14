@@ -42,14 +42,29 @@ export function serverKey(): string | null {
   return process.env.GOOGLE_MAPS_SERVER_KEY || null
 }
 
-/** อ่านพิกัดจาก query string พร้อมตรวจช่วงค่า ไม่ใช่แค่แปลงเป็นตัวเลข */
+/**
+ * อ่านพิกัดจาก query string พร้อมตรวจว่ามีค่าจริงและอยู่ในช่วงที่เป็นไปได้
+ *
+ * ⚠️ ต้องเช็กว่าพารามิเตอร์ "มีอยู่" ก่อนแปลงเป็นตัวเลข
+ * เพราะ Number(null) ได้ 0 ไม่ใช่ NaN และ Number('') ก็ได้ 0 เหมือนกัน
+ * ถ้าข้ามขั้นนี้ คำขอที่ไม่ได้ส่งพิกัดมาเลยจะกลายเป็นพิกัด (0, 0)
+ * ซึ่งเป็นจุดกลางมหาสมุทรแอตแลนติก แล้วผ่านการตรวจช่วงค่าไปได้อย่างเงียบๆ
+ *
+ * ผลคือ endpoint จะยิงไปหา Google ทั้งที่ควรปฏิเสธตั้งแต่ต้น
+ * เสียทั้งเงินและเปิดช่องให้คนอื่นยิงคำขอมั่วๆ เข้ามาผลาญโควตา
+ */
 export function readLatLng(
   params: URLSearchParams,
   latKey = 'lat',
   lngKey = 'lng',
 ): { lat: number; lng: number } | null {
-  const lat = Number(params.get(latKey))
-  const lng = Number(params.get(lngKey))
+  const rawLat = params.get(latKey)
+  const rawLng = params.get(lngKey)
+  if (rawLat === null || rawLng === null) return null
+  if (rawLat.trim() === '' || rawLng.trim() === '') return null
+
+  const lat = Number(rawLat)
+  const lng = Number(rawLng)
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null
   return { lat, lng }
