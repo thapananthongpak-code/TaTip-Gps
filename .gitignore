@@ -29,3 +29,11 @@ dev-dist
 test-results/
 playwright-report/
 coverage/
+
+# Capacitor / Android — ผลลัพธ์ของการ build ไม่ต้องเก็บเข้า git
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/res/xml/config.xml

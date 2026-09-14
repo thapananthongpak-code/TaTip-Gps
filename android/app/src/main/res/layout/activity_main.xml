@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <!--
+        keepScreenOn เป็นตาข่ายรองรับของ Wake Lock ฝั่งเว็บ
+
+        Screen Wake Lock API (navigator.wakeLock) เป็นของ Chrome ไม่ได้เปิดให้ใน Android WebView
+        hook ฝั่งเว็บจึงขอไม่สำเร็จแล้วเงียบไป ถ้าไม่มีบรรทัดนี้ หน้าจอจะดับใน 30 วินาที
+        แล้วแอปจะพักการนำทาง ผู้ใช้ที่มองไม่เห็นจะเดินต่อโดยไม่มีเสียงบอกทางอีกเลย
+
+        ยอมแลกแบตเตอรี่ เพราะแอปนี้เปิดเฉพาะตอนกำลังเดินทางอยู่แล้ว
+    -->
+    <WebView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:keepScreenOn="true" />
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

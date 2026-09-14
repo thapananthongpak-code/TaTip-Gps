@@ -7,7 +7,8 @@ import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist', 'dev-dist', 'node_modules', 'coverage'] },
+  // android/ เป็นโปรเจกต์ Android ที่ Capacitor สร้างและดูแลเอง ไม่ใช่ซอร์สของเรา
+  { ignores: ['dist', 'dev-dist', 'node_modules', 'coverage', 'android'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
