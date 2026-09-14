@@ -10,7 +10,7 @@
   },
   "permission": {
     "title": "This app needs your location",
-    "body": "GPS provides your location for directions. Searches and route requests send data to external map providers. This app does not record route history. Choose a voice mode and test it before starting.",
+    "body": "GPS provides your location for directions. Searches and route requests send data to external map providers. This app does not record route history. The app speaks directions on its own; if your device has no voice for the chosen language, your screen reader reads them instead.",
     "startButton": "Start and allow location access",
     "startButtonHint": "Tap to allow location access and enable spoken guidance",
     "spoken": "Welcome to Taa-Thip Navigator. This app needs G P S to guide you by voice. Tap the button in the middle of the screen to allow it."
@@ -90,7 +90,7 @@
     "stoppedSpoken": "Navigation stopped. You can choose a new destination.",
     "repeatInstruction": "Repeat instruction",
     "navigatingTo": "Navigating to {{destination}}",
-    "paused": "Walking guidance paused: location or audio is not ready. Stop somewhere safe. Check GPS and test audio before continuing.",
+    "paused": "Walking guidance paused: your location is not accurate enough or has stopped updating. Stop somewhere safe and wait for the signal to come back.",
     "resumed": "Guidance is available again. Check your surroundings before continuing.",
     "confirmTurn": "Confirm I have passed this turn",
     "safetyNote": "Use with a cane or guide dog. This app cannot detect vehicles, obstacles or crossing signals, or tell you it is safe to cross. Keep this app in the foreground while walking; switching to another app stops guidance.",

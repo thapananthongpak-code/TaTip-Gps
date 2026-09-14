@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { isNativeApp } from '@/utils/platform'
 import { BigButton } from './BigButton'
 
 /**
@@ -9,6 +10,18 @@ import { BigButton } from './BigButton'
  * ซึ่งอันตรายกับผู้ใช้ที่กำลังเดินอยู่ — ให้ผู้ใช้เลือกจังหวะเอง
  */
 export function UpdatePrompt({ busy = false }: { busy?: boolean }) {
+  /*
+   * แอปที่ติดตั้งจาก APK อัปเดตด้วยการติดตั้งไฟล์ใหม่ทับ ไม่ใช่ผ่าน service worker
+   * ถ้าไม่ดักไว้ ผู้ใช้จะเจอแถบ "มีเวอร์ชันใหม่" ทั้งที่เพิ่งติดตั้งเวอร์ชันใหม่ไปแล้ว
+   *
+   * ค่านี้คงที่ตลอดการเปิดแอปหนึ่งครั้ง การคืนค่าก่อนเรียก hook จึงไม่ทำให้ลำดับ hook เพี้ยน
+   */
+  if (isNativeApp()) return null
+  return <WebUpdatePrompt busy={busy} />
+}
+
+/** แถบแจ้งเวอร์ชันใหม่ สำหรับตอนเปิดผ่านเว็บเท่านั้น */
+function WebUpdatePrompt({ busy }: { busy: boolean }) {
   const { t } = useTranslation()
   const {
     needRefresh: [needRefresh, setNeedRefresh],
