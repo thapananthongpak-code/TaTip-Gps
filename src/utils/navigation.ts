@@ -46,6 +46,14 @@ export function computeProgress(
   route: Route,
   position: LatLng,
   fromStepIndex: number,
+  /**
+   * ความเร็วเดินจริงของผู้ใช้ (เมตร/วินาที) ถ้าวัดได้แล้ว
+   *
+   * ใช้แทนความเร็วสมมติของบริการเส้นทาง เพราะ OSRM คิดที่ราว 1.25 เมตร/วินาที
+   * ซึ่งเป็นความเร็วคนเดินทั่วไป คนที่ใช้ไม้เท้าตรวจทางทุกก้าวเดินช้ากว่านั้นมาก
+   * เวลาที่บอกจึงสั้นกว่าความจริงเสมอ และยิ่งเส้นทางยาวยิ่งคลาดมาก
+   */
+  observedPaceMps?: number | null,
 ): RouteProgress {
   const steps = route.steps
   const lastIndex = steps.length - 1
@@ -95,9 +103,16 @@ export function computeProgress(
   let remainingDistance = distanceToNextManeuver
   for (let i = stepIndex + 1; i <= lastIndex; i++) remainingDistance += steps[i].distance
 
-  // ใช้ความเร็วจริงของเส้นทางถ้าคำนวณได้ ไม่งั้นใช้ความเร็วเดินเฉลี่ย
-  const speed =
+  /*
+   * ลำดับความน่าเชื่อถือของความเร็วที่ใช้คำนวณเวลา:
+   * 1. ความเร็วเดินจริงของผู้ใช้คนนี้ ถ้าวัดมาแล้ว
+   * 2. ความเร็วเฉลี่ยที่บริการเส้นทางคิดไว้
+   * 3. ความเร็วเดินมาตรฐาน
+   */
+  const routeSpeed =
     route.duration > 0 && route.distance > 0 ? route.distance / route.duration : WALKING_SPEED_MPS
+  const speed =
+    observedPaceMps && observedPaceMps > 0.1 && observedPaceMps < 3 ? observedPaceMps : routeSpeed
 
   const distanceToDestination = mapService.distanceBetween(position, route.destination.location)
 

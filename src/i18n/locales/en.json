@@ -91,7 +91,10 @@
     "finishButton": "Finish trip",
     "finishedSpoken": "Trip finished. Ready to search for a new destination.",
     "movingAway": "You may be walking away from your destination",
-    "movingAwaySpoken": "You seem to be walking away from your destination. Please stop somewhere safe, then press Repeat instruction to hear the way again."
+    "movingAwaySpoken": "You seem to be walking away from your destination. Please stop somewhere safe, then press Repeat instruction to hear the way again.",
+    "vehicleSpeed": "Moving faster than walking — guidance paused",
+    "vehicleSpeedSpoken": "You seem to be moving faster than walking, so walking guidance is paused. If you are in a vehicle, please stop guidance and search again after you get off.",
+    "stillThereSpoken": "You have not moved for a few minutes. Press Repeat instruction if you want to hear the way again."
   },
   "whereAmI": {
     "button": "Where am I?",

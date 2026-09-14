@@ -21,9 +21,25 @@ interface UseGeolocationOptions {
   timeoutMs?: number
 }
 
+/**
+ * เก็บประวัติตำแหน่งไว้กี่จุด
+ *
+ * พอสำหรับ 5 นาทีที่ GPS อัปเดตทุกวินาที ซึ่งยาวพอจะวัดความเร็วเดินเฉลี่ยได้นิ่ง
+ * และสั้นพอที่จะไม่กินหน่วยความจำระหว่างเดินทางไกล
+ */
+const HISTORY_SIZE = 300
+
 export interface UseGeolocationResult {
   status: GeoStatus
   position: GeoPosition | null
+  /**
+   * ตำแหน่งล่าสุดเรียงตามเวลา สำหรับคำนวณความเร็วและการหยุดนิ่ง
+   *
+   * เก็บที่นี่เพราะเป็นที่เดียวที่ตำแหน่งใหม่เข้ามา และเข้ามาผ่าน callback
+   * ของเบราว์เซอร์ ไม่ใช่ผ่าน effect จึงอัปเดตสถานะได้ตรงไปตรงมา
+   * ส่วนการแปลงประวัติเป็นความเร็วเป็นฟังก์ชันบริสุทธิ์ที่อยู่แยกต่างหาก
+   */
+  history: GeoPosition[]
   error: GeoError | null
   /** true เมื่อ accuracy แย่กว่าเกณฑ์ */
   isPoorAccuracy: boolean
@@ -45,6 +61,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
   } = options
   const [status, setStatus] = useState<GeoStatus>('idle')
   const [position, setPosition] = useState<GeoPosition | null>(null)
+  const [history, setHistory] = useState<GeoPosition[]>([])
   const [error, setError] = useState<GeoError | null>(null)
   const [isStale, setIsStale] = useState(false)
   const watch = useRef<number | null>(null)
@@ -60,6 +77,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
     cleanup()
     setStatus('idle')
     setPosition(null)
+    setHistory([])
     setError(null)
     setIsStale(false)
   }, [cleanup])
@@ -68,6 +86,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
     const id = generation.current
     setError(null)
     setPosition(null)
+    setHistory([])
     setIsStale(false)
     if (!window.isSecureContext) {
       setError({ code: 'INSECURE_CONTEXT' })
@@ -105,7 +124,14 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
             setIsStale(true)
             return
           }
-          setPosition({ lat, lng, accuracy, heading, speed, timestamp: fix.timestamp })
+          const next: GeoPosition = { lat, lng, accuracy, heading, speed, timestamp: fix.timestamp }
+          setPosition(next)
+          // ตำแหน่งเดิมที่ส่งซ้ำไม่ใช่ข้อมูลใหม่ ถ้านับด้วยจะทำให้ดูเหมือนหยุดนิ่ง
+          setHistory((prev) =>
+            prev[prev.length - 1]?.timestamp === next.timestamp
+              ? prev
+              : [...prev, next].slice(-HISTORY_SIZE),
+          )
           setError(null)
           setStatus('tracking')
           const age = Date.now() - fix.timestamp
@@ -143,6 +169,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
   return {
     status,
     position,
+    history,
     error,
     isStale,
     isPoorAccuracy: !!position && position.accuracy > poorAccuracyThreshold,

@@ -25,10 +25,15 @@ interface Props {
   onRepeat: () => void
   /** จบการเดินทางเมื่อถึงจุดหมายแล้ว ต่างจากการยกเลิกกลางทาง */
   onFinish: () => void
+  /**
+   * true = ที่พักคำแนะนำเพราะกำลังเคลื่อนที่เร็วกว่าการเดิน ไม่ใช่เพราะสัญญาณไม่ดี
+   * ต้องแยกให้ขาด เพราะทางแก้ของสองเรื่องนี้ต่างกันคนละทาง
+   */
+  inVehicle?: boolean
 }
 
 /** แผงนำทางระหว่างเดินทาง — คำแนะนำถัดไป ระยะที่เหลือ และปุ่มควบคุม */
-export function NavigationPanel({ nav, onRepeat, onFinish }: Props) {
+export function NavigationPanel({ nav, onRepeat, onFinish, inVehicle = false }: Props) {
   const { t } = useTranslation()
   const { status, destination, progress, error, isOffRoute, isRecalculating } = nav
 
@@ -76,7 +81,9 @@ export function NavigationPanel({ nav, onRepeat, onFinish }: Props) {
                 distance: formatDistance(nav.arrivalOffset),
               })
             : t('nav.arrived'))}
-        {status === 'navigating' && nav.suspended && t('nav.paused')}
+        {status === 'navigating' &&
+          nav.suspended &&
+          t(inVehicle ? 'nav.vehicleSpeed' : 'nav.paused')}
         {status === 'navigating' &&
           !nav.suspended &&
           (isRecalculating

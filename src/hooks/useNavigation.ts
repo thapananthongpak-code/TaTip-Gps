@@ -91,7 +91,12 @@ const ARRIVAL_MAX_ACCURACY_M = 30
  * hook นี้รับผิดชอบ "สถานะและตัวเลข" อย่างเดียว
  * ส่วนการพูดออกเสียงอยู่ที่ useNavigationAnnouncer เพื่อให้แต่ละส่วนเทสต์แยกกันได้
  */
-export function useNavigation(position: GeoPosition | null, usable = true): UseNavigationResult {
+export function useNavigation(
+  position: GeoPosition | null,
+  usable = true,
+  /** ความเร็วเดินจริงของผู้ใช้ ใช้ให้เวลาที่เหลือตรงกับความเป็นจริงมากขึ้น */
+  observedPaceMps: number | null = null,
+): UseNavigationResult {
   const [status, setStatus] = useState<NavStatus>('idle')
   const [route, setRoute] = useState<Route | null>(null)
   const [destination, setDestination] = useState<Place | null>(null)
@@ -211,7 +216,7 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
     if (status !== 'navigating' || !route || !position || !usable || isRecalculating) return
     if (Date.now() - position.timestamp > 15000 || position.accuracy > 30) return
 
-    const result = computeProgress(route, position, stepIndexRef.current)
+    const result = computeProgress(route, position, stepIndexRef.current, observedPaceMps)
     stepIndexRef.current = result.stepIndex
 
     setProgress({
@@ -263,7 +268,17 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
       offRouteStreakRef.current = 0
       setIsOffRoute(false)
     }
-  }, [position, route, status, destination, isRecalculating, calculate, usable, manualStep])
+  }, [
+    position,
+    route,
+    status,
+    destination,
+    isRecalculating,
+    calculate,
+    usable,
+    manualStep,
+    observedPaceMps,
+  ])
 
   useEffect(() => () => abortRef.current?.abort(), [])
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Announcer } from '@/components/Announcer'
 import { BigButton } from '@/components/BigButton'
@@ -27,6 +27,7 @@ import { currentLanguage } from '@/i18n'
 import { speechService } from '@/services'
 import type { Place } from '@/types'
 import { speakDistance } from '@/utils/format'
+import { movementFrom } from '@/utils/movement'
 import { speakableStreet } from '@/utils/script'
 import { vibrate } from '@/utils/vibration'
 
@@ -38,6 +39,14 @@ const NAVIGATION_ACCURACY_M = 30
 
 /** ตำแหน่งที่เก่ากว่านี้ (มิลลิวินาที) ถือว่าค้าง */
 const POSITION_STALE_MS = 15_000
+
+/**
+ * หยุดนิ่งนานกว่านี้ระหว่างนำทาง ถึงจะถามว่ายังอยู่ไหม
+ *
+ * ตั้งไว้ยาวพอที่การรอข้ามถนน รอไฟเขียว หรือหยุดคุยกับใครสักคน
+ * จะไม่ทำให้แอปพูดขึ้นมาแทรกโดยไม่จำเป็น
+ */
+const STATIONARY_CHECK_MS = 180_000
 
 /**
  * ตาทิพย์ Navigator
@@ -80,7 +89,14 @@ export default function App() {
     now - geo.position.timestamp <= POSITION_STALE_MS
   const usable = gpsUsable && visible
 
-  const nav = useNavigation(geo.position, usable)
+  /*
+   * ติดตามว่าผู้ใช้กำลังเดิน หยุด หรืออยู่บนยานพาหนะ
+   * เริ่มเก็บตั้งแต่ได้ตำแหน่ง ไม่ต้องรอเริ่มนำทาง เพื่อให้มีข้อมูลพอตั้งแต่ก้าวแรก
+   */
+  const movement = useMemo(() => movementFrom(geo.history), [geo.history])
+  const inVehicle = movement.mode === 'vehicle'
+
+  const nav = useNavigation(geo.position, usable && !inVehicle, movement.paceMps)
   const active = nav.status !== 'idle' && nav.status !== 'arrived'
   /*
    * กันหน้าจอดับตลอดการเดินทาง
@@ -105,8 +121,29 @@ export default function App() {
      */
     if (!paused && !active) return
     if (paused) speechService.cancel()
-    speak(t(paused ? 'nav.paused' : 'nav.resumed'), { priority: 'critical' })
-  }, [active, usable, speak, t])
+    /*
+     * บอกเหตุผลที่พักให้ตรง ไม่งั้นคนที่อยู่บนรถจะได้ยินว่า "ตำแหน่งไม่แม่นพอ"
+     * แล้วไปยืนรอสัญญาณกลางถนน ทั้งที่ปัญหาคือกำลังนั่งรถอยู่
+     */
+    const key = paused ? (inVehicle ? 'nav.vehicleSpeedSpoken' : 'nav.paused') : 'nav.resumed'
+    speak(t(key), { priority: 'critical' })
+  }, [active, usable, inVehicle, speak, t])
+
+  /*
+   * หยุดนิ่งนานผิดปกติระหว่างนำทาง มักแปลว่ามีบางอย่างไม่เป็นไปตามแผน
+   * เช่น สับสนว่าอยู่ตรงไหน ทางตัน หรือรอคนช่วยอยู่
+   * ถามครั้งเดียวต่อการหยุดหนึ่งครั้ง ไม่ถามซ้ำจนกลายเป็นเสียงรบกวน
+   */
+  const askedWhileStopped = useRef(false)
+  useEffect(() => {
+    if (!active || !usable || movement.mode !== 'stationary') {
+      if (movement.mode !== 'stationary') askedWhileStopped.current = false
+      return
+    }
+    if (movement.stationaryMs < STATIONARY_CHECK_MS || askedWhileStopped.current) return
+    askedWhileStopped.current = true
+    speak(t('nav.stillThereSpoken'), { priority: 'normal' })
+  }, [active, usable, movement.mode, movement.stationaryMs, speak, t])
 
   useGpsAnnouncer(geo, started && !active)
 
@@ -158,8 +195,8 @@ export default function App() {
   /** พูดคำแนะนำปัจจุบันซ้ำ สำหรับตอนที่ฟังไม่ทันหรือมีเสียงรบกวน */
   const repeat = useCallback(() => {
     speechService.cancel()
-    if (active && !usable) {
-      speak(t('nav.paused'), { priority: 'critical' })
+    if (active && (!usable || inVehicle)) {
+      speak(t(inVehicle ? 'nav.vehicleSpeedSpoken' : 'nav.paused'), { priority: 'critical' })
       return
     }
     if (nav.status === 'error') {
@@ -194,7 +231,7 @@ export default function App() {
       return
     }
     speak(t(active ? 'nav.calculatingSpoken' : 'gps.acquiringSpoken'), { priority: 'critical' })
-  }, [active, usable, nav, speak, t])
+  }, [active, usable, inVehicle, nav, speak, t])
 
   /**
    * ปุ่มเดียวตอบคำถามที่ผู้ใช้ถามจริงว่า "ตอนนี้ฉันอยู่ไหน"
@@ -279,6 +316,7 @@ export default function App() {
                   nav={{ ...nav, stop: stopNavigation }}
                   onRepeat={repeat}
                   onFinish={finishTrip}
+                  inVehicle={inVehicle}
                 />
                 {nav.route && (
                   <ObstacleReport
