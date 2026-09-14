@@ -47,6 +47,14 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        /*
+         * ห้าม service worker ตอบ index.html แทน /api/
+         *
+         * ตัว navigate fallback มีไว้ให้เปิดแอปตอนออฟไลน์ได้ แต่ถ้าไม่กันไว้
+         * คำขอที่เป็นการนำทางไปยัง /api/ จะได้ HTML กลับมาแทน JSON
+         * ซึ่งดีบั๊กยากมากเพราะดูเหมือนเซิร์ฟเวอร์ตอบ 200 ปกติ
+         */
+        navigateFallbackDenylist: [/^\/api\//],
         // แผนที่ที่เคยโหลดแล้วยังดูได้ตอนออฟไลน์
         runtimeCaching: [
           {
@@ -70,11 +78,23 @@ export default defineConfig({
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'google-fonts' },
           },
-          // ผลค้นหาและเส้นทางต้องเป็นข้อมูลสด ห้าม cache
-          // ถ้าเผลอ cache ไว้ ผู้ใช้อาจได้เส้นทางเก่าที่ไม่ตรงกับตำแหน่งจริงโดยไม่รู้ตัว
+          /*
+           * ผลค้นหา เส้นทาง และสิ่งกีดขวางต้องเป็นข้อมูลสดเสมอ ห้าม cache เด็ดขาด
+           *
+           * ถ้าเผลอ cache ไว้ ผู้ใช้อาจได้เส้นทางเก่าที่ไม่ตรงกับตำแหน่งจริงโดยไม่รู้ตัว
+           * ซึ่งสำหรับคนที่เดินตามเสียงอย่างเดียว แปลว่าเดินตามคำสั่งที่ผิดไปเรื่อยๆ
+           *
+           * ครอบให้ครบทุกผู้ให้บริการ ทั้งชุดฟรีเดิมและ Google รวมถึง /api/ ของเราเอง
+           * เดิมตกหล่น Photon และ Overpass ไป ทั้งที่สองตัวนั้นก็ตอบข้อมูลที่ใช้เดินทางเหมือนกัน
+           */
           {
             urlPattern:
-              /^https:\/\/(nominatim\.openstreetmap\.org|routing\.openstreetmap\.de|router\.project-osrm\.org)\/.*/i,
+              /^https:\/\/(nominatim\.openstreetmap\.org|routing\.openstreetmap\.de|router\.project-osrm\.org|photon\.komoot\.io|overpass-api\.de|places\.googleapis\.com|routes\.googleapis\.com|maps\.googleapis\.com)\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            // proxy ของเราเองที่ถือคีย์ Google — ข้อมูลสดล้วน
+            urlPattern: /\/api\/.*/,
             handler: 'NetworkOnly',
           },
         ],

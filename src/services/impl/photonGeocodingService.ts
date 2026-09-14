@@ -107,8 +107,23 @@ export const photonGeocodingService: GeocodingService = {
     const trimmed = query.trim()
     if (trimmed.length < 2) return []
 
-    const { limit = 5, near, signal } = options
-    const params = new URLSearchParams({ q: trimmed, limit: String(limit * 2) })
+    const { language = 'th', limit = 5, near, signal } = options
+
+    /*
+     * Photon รองรับเฉพาะ de, en, fr, it — ไม่มีไทย ค่าอื่นต้องส่งเป็น default
+     *
+     * เดิมไม่เคยส่งพารามิเตอร์นี้เลย ผลคือเมื่อผู้ใช้เลือกภาษาอังกฤษ
+     * แล้ว Nominatim หาไม่เจอจนตกมาที่ Photon (ซึ่งคือเส้นทางที่ใช้บ่อยที่สุด
+     * เวลาพิมพ์ตัวย่อหรือสะกดไม่ครบ) รายชื่อผลลัพธ์จะกลับมาเป็นภาษาไทยทั้งหมด
+     * ผู้ใช้ที่อ่านไทยไม่ออกจึงเจอรายการที่ฟังแล้วไม่รู้เรื่องปนอยู่ในผลค้นหาภาษาอังกฤษ
+     *
+     * default = ชื่อตามท้องถิ่น ซึ่งเป็นสิ่งที่ต้องการอยู่แล้วเมื่อผู้ใช้เลือกภาษาไทย
+     */
+    const params = new URLSearchParams({
+      q: trimmed,
+      limit: String(limit * 2),
+      lang: language === 'en' ? 'en' : 'default',
+    })
 
     // ถ่วงน้ำหนักผลลัพธ์ที่อยู่ใกล้ผู้ใช้ก่อน
     if (near) {
