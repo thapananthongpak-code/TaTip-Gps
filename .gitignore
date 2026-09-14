@@ -46,3 +46,5 @@ android/app/src/main/res/xml/config.xml
 # ไฟล์แจกจ่ายที่สร้างจาก build
 release/
 *.zip
+# โฟลเดอร์ที่เกิดจากการดับเบิลคลิกไฟล์ zip บน macOS
+TaaThip-Navigator-android/
