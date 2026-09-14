@@ -165,7 +165,7 @@ Photon คืนทางเท้าและอาคารที่ชื่�
 
 > ### ⚠️ ที่ยังทำไม่ได้
 >
-> การจัดอันดับยังผิดได้เมื่อ Nominatim เจอผลลัพธ์ที่ "ผิดตัว" เช่น "รพ.รามา" ได้ "สะพานพระราม 8" — เพราะเจอผลแล้วจึงไม่เข้าเงื่อนไขถอยไปใช้ตัวสำรอง ทั้งสองบริการไม่มีการให้คะแนนความใกล้เคียงที่เอามาเทียบกันได้ ถ้าต้องการความทนทานระดับที่ผู้ใช้ทั่วไปคาดหวัง ต้องใช้ Places Autocomplete — ดูหัวข้อ **ถ้าจะเปลี่ยนไปใช้ Google**
+> การจัดอันดับยังผิดได้เมื่อ Nominatim เจอผลลัพธ์ที่ "ผิดตัว" เช่น "รพ.รามา" ได้ "สะพานพระราม 8" — เพราะเจอผลแล้วจึงไม่เข้าเงื่อนไขถอยไปใช้ตัวสำรอง ทั้งสองบริการไม่มีการให้คะแนนความใกล้เคียงที่เอามาเทียบกันได้ ถ้าต้องการความทนทานระดับที่ผู้ใช้ทั่วไปคาดหวัง ต้องใช้ Places Autocomplete — ดูหัวข้อ **เปลี่ยนไปใช้ Google Maps Platform**
 
 ### ทำไมไม่มีปุ่ม "ค้นหารอบตัว"
 
@@ -181,7 +181,7 @@ Photon คืนทางเท้าและอาคารที่ชื่�
 >
 > ไม่ใช่ข้อผิดพลาดของโค้ดหรือของ API แต่เป็นเพราะ OSM เป็นข้อมูลอาสาสมัคร ปุ่มที่กดแล้วได้ศูนย์รายการทั้งที่ในความจริงมีร้านอยู่ แย่กว่าการไม่มีปุ่มนั้นเลย เพราะผู้ใช้ที่มองไม่เห็นจะสรุปว่า "แถวนี้ไม่มีร้านขายยา"
 
-ถ้าจะทำฟีเจอร์นี้ให้ใช้ได้จริงทั่วประเทศ ต้องเปลี่ยนไปใช้ Google Places — ดูหัวข้อ **ถ้าจะเปลี่ยนไปใช้ Google**
+ถ้าจะทำฟีเจอร์นี้ให้ใช้ได้จริงทั่วประเทศ ต้องเปลี่ยนไปใช้ Google Places — ดูหัวข้อ **เปลี่ยนไปใช้ Google Maps Platform**
 
 ## ตรวจสิ่งกีดขวางบนเส้นทาง
 
@@ -287,7 +287,7 @@ Nominatim จับคำแบบตรงตัว คำที่คนพู
 
 Service worker ไม่อัปเดตอัตโนมัติระหว่างนำทาง ปุ่มอัปเดตถูกปิดจนหยุดนำทาง
 
-## ถ้าจะเปลี่ยนไปใช้ Google
+## เปลี่ยนไปใช้ Google Maps Platform
 
 ### Google ดีกว่าตรงไหน และแย่กว่าตรงไหน
 
@@ -379,97 +379,69 @@ Google Maps Platform ให้โควตาเรียกฟรีต่อ�
 - **ใช้ session token กับ Autocomplete** — Google คิดเงินการพิมพ์ทั้งชุดจนถึงการเลือกเป็นหนึ่งครั้ง ถ้าไม่ส่ง token จะถูกคิดทุกตัวอักษรที่พิมพ์
 - **ขอเฉพาะฟิลด์ที่ใช้** ผ่าน `X-Goog-FieldMask` — ยิ่งขอฟิลด์มากยิ่งขึ้นชั้นราคาที่แพงขึ้น
 
-### ทำอย่างไร
+### วิธีเปิดใช้ — เขียนโค้ดไว้แล้ว เหลือแค่ตั้งค่า
 
-โครงสร้างของโปรเจกต์รองรับการเปลี่ยนไว้แล้ว ทุก service ถูกผูกที่ [`src/services/index.ts`](src/services/index.ts) จุดเดียว
+โค้ดฝั่ง Google เขียนและทดสอบไว้แล้วทั้งหมด **ไม่ต้องแก้โค้ดอะไรเลย** ตั้งค่าอย่างเดียว
 
-**1. สร้าง backend เล็กๆ ทำหน้าที่ proxy** (เช่น Vercel Serverless Function) เก็บคีย์ไว้ฝั่งเซิร์ฟเวอร์
+ถ้าไม่ตั้งค่า แอปจะใช้ชุดฟรีเดิม (OpenStreetMap + Nominatim + Photon + OSRM) ต่อไปตามปกติ
+ตั้งใจให้เป็นแบบนี้เพราะแอปนี้คนใช้เดินทางจริง ถ้าคีย์หมดอายุหรืองบหมด ต้องยังเดินทางได้
 
-```ts
-// api/places.ts — คีย์อยู่ใน environment variable ของ Vercel ไม่เคยออกไปถึงเบราว์เซอร์
-export default async function handler(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': process.env.GOOGLE_MAPS_KEY!,
-      // ขอเฉพาะฟิลด์ที่ใช้จริง ยิ่งขอมากยิ่งขึ้นชั้นราคาที่แพงขึ้น
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.location,places.formattedAddress',
-    },
-    body: JSON.stringify({
-      textQuery: searchParams.get('q'),
-      languageCode: searchParams.get('lang') ?? 'th',
-      maxResultCount: 8,
-      // จัดอันดับผลที่อยู่ใกล้ผู้ใช้ก่อน แต่ไม่ตัดผลที่อยู่ไกลทิ้ง
-      locationBias: {
-        circle: {
-          center: {
-            latitude: Number(searchParams.get('lat')),
-            longitude: Number(searchParams.get('lng')),
-          },
-          radius: 20000,
-        },
-      },
-    }),
-  })
-  return new Response(await response.text(), {
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
+**1. คีย์สองตัว ไม่ใช่ตัวเดียว**
+
+| คีย์ | ใช้กับ | อยู่ที่ไหน | จำกัดอย่างไร |
+| --- | --- | --- | --- |
+| `VITE_GOOGLE_MAPS_BROWSER_KEY` | Maps JavaScript API | **ในเบราว์เซอร์** (ซ่อนไม่ได้ตามการออกแบบ) | เว็บ: HTTP referrer · Android: ชื่อแพ็กเกจ + SHA-1 |
+| `GOOGLE_MAPS_SERVER_KEY` | Places · Geocoding · Routes | **ฝั่งเซิร์ฟเวอร์เท่านั้น** | เปิดสิทธิ์เฉพาะ 3 API นี้ |
+
+> ⚠️ **ห้ามใช้คีย์เดียวกันทั้งสองช่อง** คีย์ของ Places/Routes จำกัดด้วย referrer ไม่ได้
+> ถ้าฝังไว้ในไฟล์ APK ที่แจกออกไป ใครแกะไฟล์ก็เอาไปใช้ได้ แล้วบิลจะวิ่งโดยเจ้าของไม่รู้ตัว
+> นี่คือเหตุผลทั้งหมดที่ต้องมี `api/` เป็นตัวกลาง แทนที่จะยิง Google ตรงจากแอป
+
+**2. ตั้งค่าสำหรับเว็บ (Vercel)**
+
+Project → Settings → Environment Variables
+
+```
+VITE_GOOGLE_MAPS_BROWSER_KEY = <คีย์เบราว์เซอร์>
+VITE_API_BASE_URL            = (ปล่อยว่าง — /api อยู่โดเมนเดียวกัน)
+GOOGLE_MAPS_SERVER_KEY       = <คีย์เซิร์ฟเวอร์>
+API_TOKEN                    = (ไม่บังคับ ดูข้อ 4)
 ```
 
-**2. เขียน implementation ใหม่** ที่ implement interface เดิม แปลงข้อมูลของ Google เป็นไทป์กลางของแอป
+**3. ตั้งค่าสำหรับแอป Android**
 
-```ts
-// src/services/impl/googleGeocodingService.ts
-import { ServiceError } from '@/types'
-import type { GeocodingService, SearchOptions } from '@/services/interfaces'
-import type { LatLng, Place } from '@/types'
+แอปที่ห่อด้วย Capacitor ไม่มีเซิร์ฟเวอร์ในตัว ต้องชี้ไปที่ proxy ที่ deploy ไว้แล้ว
+ใส่ใน `.env.local` ก่อนสั่ง `npm run android:apk`
 
-interface GooglePlace {
-  id: string
-  displayName?: { text: string }
-  formattedAddress?: string
-  location: { latitude: number; longitude: number }
-}
-
-export const googleGeocodingService: GeocodingService = {
-  async search(query: string, options: SearchOptions = {}): Promise<Place[]> {
-    const params = new URLSearchParams({ q: query, lang: options.language ?? 'th' })
-    if (options.near) {
-      params.set('lat', String(options.near.lat))
-      params.set('lng', String(options.near.lng))
-    }
-    const response = await fetch(`/api/places?${params}`, { signal: options.signal })
-    if (!response.ok) throw new ServiceError('PROVIDER_ERROR', String(response.status))
-    const data = await response.json()
-
-    return (data.places ?? []).map((place: GooglePlace) => ({
-      id: place.id,
-      name: place.displayName?.text ?? '',
-      address: place.formattedAddress ?? '',
-      location: { lat: place.location.latitude, lng: place.location.longitude },
-    }))
-  },
-
-  async reverse(location: LatLng, options: SearchOptions = {}): Promise<Place | null> {
-    // ใช้ Geocoding API ซึ่งเป็นคนละตัวกับ Places — ทำ proxy อีกตัวแบบเดียวกัน
-    throw new ServiceError('UNKNOWN', 'ยังไม่ได้ทำ')
-  },
-}
+```
+VITE_GOOGLE_MAPS_BROWSER_KEY=<คีย์เบราว์เซอร์>
+VITE_API_BASE_URL=https://<โปรเจกต์ของคุณ>.vercel.app
 ```
 
-**3. สลับที่ composition root บรรทัดเดียว**
+ถ้าปล่อย `VITE_API_BASE_URL` ว่างในแอป Android คำขอจะวิ่งไปหา `https://localhost` ซึ่งไม่มีอะไรอยู่
 
-```diff
-- export const geocodingService: GeocodingService = compositeGeocodingService
-+ export const geocodingService: GeocodingService = googleGeocodingService
-```
+**4. กันคนอื่นมาใช้ proxy จนบิลบาน (ไม่บังคับ แต่ควรทำ)**
 
-ส่วนอื่นของแอปทั้งหมด — hook, component, การประกาศเสียง, การนำทาง — **ไม่ต้องแก้อะไรเลย** เพราะทำงานกับไทป์กลาง (`Place`, `Route`) ไม่ได้ผูกกับรูปร่างข้อมูลของผู้ให้บริการรายใด
+ตั้ง `API_TOKEN` ฝั่ง Vercel และ `VITE_API_TOKEN` ให้ตรงกันฝั่งแอป
 
-ทำแบบเดียวกันได้กับ `RoutingService` (เส้นทางเดินเท้า) และ `ObstacleService` (สิ่งกีดขวาง)
+> กันได้แค่คนที่บังเอิญเจอ URL เท่านั้น ไม่ใช่การยืนยันตัวตนจริง เพราะโทเค็นอยู่ในแอปที่แจกออกไป
+> **การป้องกันที่ได้ผลจริงคือการตั้งวงเงินและแจ้งเตือนงบใน Cloud Console** — ดูข้อควรระวังด้านบน
+
+### สิ่งที่ **เสียไป** เมื่อเปิดใช้ Google
+
+ไม่ใช่การอัปเกรดล้วนๆ มีของที่หายไปจริงและต้องรู้ก่อนตัดสินใจ
+
+| เรื่อง | ใช้ OSRM (ฟรี) | ใช้ Routes API |
+| --- | --- | --- |
+| **เตือนสี่แยก** | ✅ OSRM บอกจำนวนแขนของแยกมาด้วย | ❌ **ไม่มีข้อมูลนี้เลย เตือนไม่ได้** |
+| เตือนถนนใหญ่ | ✅ จากชื่อถนนที่ส่งมาตรงๆ | ⚠️ เดาจากข้อความคำสั่ง |
+| ชื่อถนนในคำบอกทาง | ✅ ฟิลด์แยกชัดเจน | ⚠️ ตัดจากประโยคที่แปลแล้ว ถ้าตัดไม่ได้จะไม่พูดชื่อถนน |
+
+สี่แยกคือจุดที่อันตรายที่สุดจุดหนึ่งสำหรับคนตาบอด การเสียคำเตือนนี้ไปไม่ใช่เรื่องเล็ก
+ชั่งกับสิ่งที่ได้มาคือข้อมูลสถานที่ที่ครอบคลุมกว่ามากนอกใจกลางเมือง
+
+ส่วนการตรวจสิ่งกีดขวาง (บันได ประตูกั้น เขตก่อสร้าง) **ยังใช้ Overpass/OSM ต่อไป**
+เพราะ Google ไม่มีข้อมูลชนิดนี้ให้ ไม่ว่าจะจ่ายเงินเท่าไหร่
 
 ### คำแนะนำ
 
@@ -509,6 +481,90 @@ React + Vite + TypeScript + Tailwind, Leaflet/react-leaflet, react-i18next แ�
 - `tests/`: regression และ browser tests
 
 Geocoding/routing เปลี่ยน adapter ที่ composition root ได้โดยไม่แก้ hook นำทาง ส่วน visual map ยังใช้ react-leaflet ใน MapView/SharedLocationView หากย้ายไป Google Maps SDK ต้องเปลี่ยน renderer เหล่านี้ด้วย ไม่ใช่เปลี่ยน URL tile เพียงอย่างเดียว
+
+## สร้างไฟล์ติดตั้ง Android
+
+แอปเดียวกันนี้ห่อเป็นแอป Android ได้ด้วย **Capacitor** โดยไม่ต้องเขียนโค้ดใหม่
+
+### ทำไมไม่ใช้ Expo / React Native
+
+หัวใจของแอปนี้ผูกกับแพลตฟอร์มเว็บทั้งหมด และ React Native ไม่มีสักอย่าง
+
+| สิ่งที่แอปใช้ | ใน Capacitor (WebView) | ใน React Native |
+| --- | --- | --- |
+| แผนที่ Leaflet / Google Maps JS | ✅ ทำงานเหมือนเดิม | ❌ ต้องเปลี่ยนเป็น `react-native-maps` |
+| เสียงจาก Web SpeechSynthesis | ✅ ทำงานเหมือนเดิม | ❌ ต้องเปลี่ยนเป็น `expo-speech` |
+| `aria-live` ที่โปรแกรมอ่านหน้าจออ่าน | ✅ TalkBack อ่านได้ปกติ | ❌ ต้องเขียนใหม่ด้วย `AccessibilityInfo` |
+| Tailwind / CSS | ✅ ทำงานเหมือนเดิม | ❌ ใช้ไม่ได้ |
+| เทสต์เบราว์เซอร์ 21 ตัว | ✅ ใช้ได้ต่อ | ❌ ใช้ไม่ได้ |
+
+ระบบเสียงและการเข้าถึงคือส่วนที่แก้บั๊กมาหลายรอบและมีเทสต์คุมไว้ การเขียนใหม่หมายถึงเริ่มนับหนึ่งใหม่ทั้งหมด
+
+### สิ่งที่ต้องมีในเครื่อง
+
+- **Android SDK** (ติดตั้งผ่าน Android Studio) — ค่าปริยายมองหาที่ `~/Library/Android/sdk`
+- **JDK 17 หรือ 21** — Gradle 8.14 ใช้ Java 25 ไม่ได้
+
+ถ้ามีแต่ Java 25 จะเจอ `Unsupported class file major version 69` ซึ่งไม่ได้บอกว่าต้องทำอะไร
+ติดตั้ง JDK 21 ได้โดยไม่ต้องใช้ sudo:
+
+```bash
+mkdir -p ~/Library/Java/JavaVirtualMachines
+curl -L "https://api.adoptium.net/v3/binary/latest/21/ga/mac/aarch64/jdk/hotspot/normal/eclipse" \
+  | tar -xz -C ~/Library/Java/JavaVirtualMachines/
+```
+
+สคริปต์จะหา JDK ที่ใช้ได้ให้เอง ไม่ต้องตั้ง `JAVA_HOME`
+
+### สร้าง APK
+
+```bash
+npm run android:apk
+```
+
+รวมสามขั้นไว้ที่เดียว: build เว็บ → คัดลอกเข้าโปรเจกต์ Android → สร้าง APK
+ถ้าลืมขั้นกลาง จะได้ APK ที่ห่อโค้ดเก่าไว้โดยไม่มีอะไรเตือน
+
+ได้ไฟล์ที่ `android/app/build/outputs/apk/debug/app-debug.apk`
+
+### ⚠️ บั๊กที่เครื่อง locale ไทยจะเจอแน่นอน
+
+Build ล้มที่ `mergeDebugJavaResource` ด้วย `VerifyException` **ที่ไม่มีข้อความบอกสาเหตุเลย**
+
+ต้นเหตุ: เครื่องที่ตั้ง locale เป็นไทยได้ `BuddhistCalendar` จาก `Calendar.getInstance()`
+ซึ่งคืนปี พ.ศ. (2569) แต่ตัวเขียนไฟล์ ZIP ของ Android ใช้รูปแบบวันที่แบบ MS-DOS
+ที่เก็บปีได้แค่ **1980–2107**
+
+แก้ไว้แล้วใน `android/gradle.properties` — **ห้ามเอาบรรทัดนี้ออก**
+
+```properties
+org.gradle.jvmargs=-Xmx1536m -Duser.language=en -Duser.country=US
+```
+
+### สิ่งที่ปรับเป็นพิเศษสำหรับ Android
+
+| เรื่อง | ทำอะไร | ทำไม |
+| --- | --- | --- |
+| `androidScheme: 'https'` | ไม่ใช้ `file://` | `isSecureContext` ต้องเป็นจริง ไม่งั้น Geolocation ใช้ไม่ได้ |
+| `allowMixedContent: false` | ห้าม http ปนใน https | คำขอมีพิกัดของผู้ใช้ติดไปด้วย |
+| `ACCESS_FINE/COARSE_LOCATION` | ประกาศใน manifest | ถ้าไม่ประกาศ การขอสิทธิ์ตอนรันจะล้มเงียบ ผู้ใช้เห็นแค่ "หาตำแหน่งไม่ได้" |
+| `keepScreenOn` บน WebView | กันจอดับ | `navigator.wakeLock` เป็นของ Chrome ไม่มีใน Android WebView ถ้าจอดับการนำทางจะหยุดกลางทาง |
+
+### รุ่น release สำหรับขึ้น Play Store
+
+ไฟล์ที่ `npm run android:apk` สร้างเป็นรุ่น **debug** เซ็นด้วยกุญแจทดสอบ
+ติดตั้งเองและแจกให้คนทดลองใช้ได้ แต่อัปขึ้น Google Play ไม่ได้
+
+ถ้าจะขึ้น Play Store ต้องสร้างกุญแจของตัวเองก่อน
+
+```bash
+keytool -genkey -v -keystore taathip.keystore -alias taathip \
+  -keyalg RSA -keysize 2048 -validity 10000
+```
+
+แล้วตั้งค่าการเซ็นใน `android/app/build.gradle` และสั่ง `npm run android:apk release`
+
+> เก็บไฟล์ keystore ให้ดี ถ้าหายจะอัปเดตแอปตัวเดิมบน Play Store ไม่ได้อีกเลย ต้องขึ้นแอปใหม่
 
 ## Deploy บน Vercel
 

@@ -42,3 +42,7 @@ android/app/src/main/res/xml/config.xml
 .env
 .env.local
 .env.*.local
+
+# ไฟล์แจกจ่ายที่สร้างจาก build
+release/
+*.zip
