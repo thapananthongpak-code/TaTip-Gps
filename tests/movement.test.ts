@@ -178,3 +178,67 @@ describe('movementFrom — สรุปรวม', () => {
     expect(m.paceMps).toBeNull()
   })
 })
+
+describe('รถในเมืองที่วิ่งสลับจอด', () => {
+  /** สร้างข้อมูลการเดินทางจากช่วงความเร็วที่กำหนด */
+  function ride(phases: { seconds: number; mps: number }[]) {
+    const samples: GeoPosition[] = [at(0, 0)]
+    let distance = 0
+    let time = 0
+    for (const phase of phases) {
+      for (let i = 0; i < phase.seconds; i += 5) {
+        distance += phase.mps * 5
+        time += 5
+        samples.push(at(distance, time, 10))
+      }
+    }
+    return samples
+  }
+
+  /** นับจำนวนครั้งที่สถานะ "อยู่บนยานพาหนะ" พลิกไปมาตลอดการเดินทาง */
+  function vehicleFlips(samples: GeoPosition[]) {
+    let previous: boolean | null = null
+    let flips = 0
+    for (let i = 2; i < samples.length; i++) {
+      const inVehicle = movementFrom(samples.slice(0, i + 1)).mode === 'vehicle'
+      if (previous !== null && inVehicle !== previous) flips++
+      previous = inVehicle
+    }
+    return flips
+  }
+
+  /*
+   * ทุกครั้งที่สถานะพลิก แอปจะพูด "พักคำแนะนำ" หรือ "พร้อมอีกครั้ง" ออกมา
+   * นอกจากจะเป็นเสียงรบกวนแล้ว ช่วงที่บอกว่าพร้อมมันจะกลับไปสั่งเดิน
+   * ให้คนที่ยังนั่งอยู่บนรถ ซึ่งถ้าทำตามคือก้าวลงจากรถที่กำลังวิ่ง
+   */
+  it('จอดติดไฟแดงนานๆ ต้องไม่ถูกมองว่าลงจากรถแล้ว', () => {
+    const samples = ride([
+      { seconds: 40, mps: 10 },
+      { seconds: 70, mps: 0 },
+      { seconds: 40, mps: 10 },
+      { seconds: 70, mps: 0 },
+    ])
+    expect(vehicleFlips(samples)).toBe(1)
+    expect(movementFrom(samples).mode).toBe('vehicle')
+  })
+
+  /** เดินอย่างเดียวต้องไม่เข้าโหมดรถเลยแม้แต่ครั้งเดียว */
+  it('เดินปกติไม่เข้าโหมดรถ', () => {
+    const samples = ride([
+      { seconds: 60, mps: 1.0 },
+      { seconds: 40, mps: 0 },
+      { seconds: 60, mps: 1.2 },
+    ])
+    expect(vehicleFlips(samples)).toBe(0)
+  })
+
+  /** ลงจากรถแล้วเดินต่อ ต้องกลับมาให้คำแนะนำได้ในที่สุด */
+  it('ลงจากรถแล้วเดินต่อ ในที่สุดต้องออกจากโหมดรถ', () => {
+    const samples = ride([
+      { seconds: 60, mps: 10 },
+      { seconds: 180, mps: 1.0 },
+    ])
+    expect(movementFrom(samples).mode).toBe('walking')
+  })
+})

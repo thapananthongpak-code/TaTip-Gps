@@ -71,6 +71,17 @@ export function withinWindow(samples: GeoPosition[], windowMs: number): GeoPosit
 /** ช่วงเวลาที่ใช้ตัดสินว่ากำลังทำอะไรอยู่ ณ ตอนนี้ */
 export const MODE_WINDOW_MS = 60_000
 
+/**
+ * ช่วงเวลาที่ใช้ยืนยันว่ายังอยู่บนยานพาหนะอยู่หรือไม่
+ *
+ * ต้องยาวกว่าหน้าต่างปกติ เพราะรถในเมืองจอดติดไฟแดงทีละนาน
+ * ถ้าดูแค่หน้าต่างสั้น ช่วงที่รถจอดจะถูกมองว่าลงจากรถแล้ว
+ * จำลองแล้วพบว่ารถเมล์ที่วิ่งสลับจอดทำให้สถานะสลับไปมา 4 ครั้งใน 200 วินาที
+ * ซึ่งแอปจะพูด "พักคำแนะนำ" สลับ "พร้อมอีกครั้ง" รัวๆ
+ * และที่อันตรายกว่าคือช่วงที่บอกว่าพร้อม มันกลับไปสั่งเดินทั้งที่ยังอยู่บนรถ
+ */
+export const VEHICLE_CONFIRM_WINDOW_MS = 120_000
+
 /** ต้องเดินจริงรวมกันอย่างน้อยเท่านี้ถึงจะเชื่อค่าความเร็วเดินเฉลี่ย */
 const MIN_WALKING_MS = 30_000
 
@@ -138,7 +149,17 @@ export function stationaryDuration(samples: GeoPosition[]): number {
 export function movementFrom(samples: GeoPosition[]): Movement {
   const recent = withinWindow(samples, MODE_WINDOW_MS)
   const speedMps = netSpeed(recent)
-  const mode = classifyMovement(speedMps)
+  const immediate = classifyMovement(speedMps)
+
+  /*
+   * ยังถือว่าอยู่บนยานพาหนะ ถ้าช่วงสองนาทีที่ผ่านมายังเคลื่อนที่เร็วระดับรถ
+   * ทำให้การจอดติดไฟแดงไม่ถูกตีความว่าลงจากรถแล้ว
+   * แลกกับการที่หลังลงจากรถจริงต้องรอถึงสองนาทีกว่าคำแนะนำการเดินจะกลับมา
+   * ซึ่งปลอดภัยกว่าการกลับมาสั่งเดินให้คนที่ยังนั่งอยู่บนรถ
+   */
+  const confirmed = classifyMovement(netSpeed(withinWindow(samples, VEHICLE_CONFIRM_WINDOW_MS)))
+  const mode = confirmed === 'vehicle' ? 'vehicle' : immediate
+
   return {
     speedMps,
     mode,
