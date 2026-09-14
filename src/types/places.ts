@@ -19,10 +19,6 @@ export type ObstacleKind =
   | 'kerb'
   /** เขตก่อสร้าง ทางเดินอาจถูกปิดหรือเปลี่ยนรูป */
   | 'construction'
-  /** ทางข้ามที่ไม่มีเบรลล์บล็อก (พื้นผิวต่างสัมผัส) */
-  | 'crossing_no_tactile'
-  /** ทางแคบ เข็นรถหรือใช้ไม้เท้ากวาดลำบาก */
-  | 'narrow'
 
 /** ระดับความสำคัญ ใช้ตัดสินว่าต้องเตือนด้วยเสียงทันทีหรือแค่รายงานก่อนออกเดินทาง */
 export type ObstacleSeverity = 'high' | 'medium'
@@ -40,7 +36,6 @@ export interface Obstacle {
     hasHandrail?: boolean
     /** ขึ้นหรือลง เมื่อเดินตามทิศของ way */
     incline?: 'up' | 'down'
-    width?: number
     name?: string
   }
 }

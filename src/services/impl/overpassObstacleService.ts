@@ -32,9 +32,6 @@ const BLOCKING_BARRIERS = new Set([
   'debris',
 ])
 
-/** ทางที่แคบกว่านี้ (เมตร) ใช้ไม้เท้ากวาดหรือเข็นรถลำบาก */
-const NARROW_WIDTH_M = 0.9
-
 /** จำกัดจำนวนจุดที่ส่งให้ Overpass ไม่ให้ URL ยาวเกินและเซิร์ฟเวอร์ทำงานหนักเกินจำเป็น */
 const MAX_PATH_POINTS = 60
 
@@ -60,11 +57,6 @@ function classify(tags: Record<string, string>): ObstacleKind | null {
   if (tags.barrier === 'kerb' || tags.kerb === 'raised') return 'kerb'
   if (tags.barrier && BLOCKING_BARRIERS.has(tags.barrier)) return 'barrier'
 
-  if (tags.highway === 'crossing' && tags.tactile_paving === 'no') return 'crossing_no_tactile'
-
-  const width = Number(tags.width)
-  if (Number.isFinite(width) && width > 0 && width < NARROW_WIDTH_M) return 'narrow'
-
   return null
 }
 
@@ -76,7 +68,6 @@ function toObstacle(
 ): Obstacle {
   const tags = element.tags ?? {}
   const stepCount = Number(tags.step_count)
-  const width = Number(tags.width)
 
   return {
     id: `${element.type}/${element.id}`,
@@ -88,7 +79,6 @@ function toObstacle(
       stepCount: Number.isFinite(stepCount) && stepCount > 0 ? stepCount : undefined,
       hasHandrail: tags.handrail ? tags.handrail !== 'no' : undefined,
       incline: tags.incline === 'up' || tags.incline === 'down' ? tags.incline : undefined,
-      width: Number.isFinite(width) && width > 0 ? width : undefined,
       name: tags.name,
     },
   }
@@ -115,11 +105,9 @@ export const overpassObstacleService: ObstacleService = {
       '[out:json][timeout:25];',
       '(',
       `  node(${around})[barrier];`,
-      `  node(${around})[highway=crossing][tactile_paving=no];`,
       `  way(${around})[highway=steps];`,
       `  way(${around})[highway=construction];`,
       `  way(${around})[construction];`,
-      `  way(${around})[highway][width];`,
       ');',
       'out center tags 200;',
     ].join('\n')

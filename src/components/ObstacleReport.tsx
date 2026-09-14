@@ -13,14 +13,7 @@ interface Props {
 }
 
 /** เรียงตามความอันตราย เพื่อให้ประโยคสรุปขึ้นต้นด้วยเรื่องที่สำคัญที่สุดก่อน */
-const KIND_ORDER: ObstacleKind[] = [
-  'steps',
-  'construction',
-  'barrier',
-  'kerb',
-  'crossing_no_tactile',
-  'narrow',
-]
+const KIND_ORDER: ObstacleKind[] = ['steps', 'construction', 'barrier', 'kerb']
 
 /**
  * รายงานสิ่งกีดขวางก่อนเริ่มเดิน
