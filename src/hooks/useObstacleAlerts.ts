@@ -23,10 +23,22 @@ function describe(
   if (obstacle.kind === 'steps') {
     // บอกขึ้น/ลง จำนวนขั้น และราวจับ เพราะเป็นสามสิ่งที่ต้องรู้ก่อนเท้าแตะขั้นแรก
     const direction = detail?.incline ? t(`obstacle.incline.${detail.incline}`) : ''
-    const count = detail?.stepCount ? t('obstacle.stepCount', { count: detail.stepCount }) : ''
+    // ใช้คีย์คนละตัวกับที่แสดงบนจอ — บนจอ "18 ขั้น" อ่านรู้เรื่อง
+    // แต่ในประโยคพูดภาษาอังกฤษจะกลายเป็น "there are steps 18 steps" ที่คำซ้ำกัน
+    const count = detail?.stepCount
+      ? t('obstacle.stepCountSpoken', { count: detail.stepCount })
+      : ''
     const handrail = detail?.hasHandrail ? t('obstacle.handrail') : ''
+    /*
+     * ยุบช่องว่างที่เกิดจากรายละเอียดที่ไม่มีข้อมูล แล้วดึงเครื่องหมายวรรคตอนกลับมาชิดคำ
+     *
+     * OSM ส่วนใหญ่ไม่ได้ระบุจำนวนขั้นหรือราวจับ ช่องเหล่านั้นจึงว่างบ่อยมาก
+     * ถ้าไม่เก็บกวาด ประโยคจะกลายเป็น "there are steps ." ซึ่งเครื่องอ่านจะเว้นจังหวะ
+     * ก่อนจุดอย่างผิดธรรมชาติ จนฟังเหมือนประโยคขาดหายไปท่อนหนึ่ง
+     */
     return t('obstacle.stepsSpoken', { distance, direction, count, handrail })
       .replace(/\s+/g, ' ')
+      .replace(/\s+([.,!?])/g, '$1')
       .trim()
   }
 

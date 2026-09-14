@@ -27,9 +27,22 @@ export function ObstacleReport({ report, isScanning, announce }: Props) {
   const { speak } = useSpeech()
   const spoken = useRef<string | null>(null)
 
-  const summary = KIND_ORDER.filter((kind) => report.countsByKind[kind])
-    .map((kind) => t(`obstacle.count.${kind}`, { count: report.countsByKind[kind] }))
-    .join(' ')
+  /*
+   * ต่อรายการด้วยตัวคั่นที่ฟังแล้วแยกออก ไม่ใช่เว้นวรรคเปล่าๆ
+   *
+   * เดิมใช้ join(' ') ทำให้ได้ประโยคอย่าง "บันได 3 จุด ประตูหรือเสากั้น 1 จุด"
+   * ซึ่งเวลาอ่านออกเสียงตัวเลขของสองรายการจะชนกันจนแยกไม่ออกว่าอะไรกี่จุด
+   * ผู้ใช้ที่ตัดสินใจจากเสียงอย่างเดียวจึงได้ภาพเส้นทางที่ผิด
+   */
+  const parts = KIND_ORDER.filter((kind) => report.countsByKind[kind]).map((kind) =>
+    t(`obstacle.count.${kind}`, { count: report.countsByKind[kind] }),
+  )
+  const summary =
+    parts.length > 1
+      ? parts.slice(0, -1).join(t('obstacle.listSeparator')) +
+        t('obstacle.listLast') +
+        parts[parts.length - 1]
+      : (parts[0] ?? '')
 
   useEffect(() => {
     if (!announce || isScanning) return

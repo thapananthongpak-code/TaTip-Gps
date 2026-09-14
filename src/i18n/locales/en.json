@@ -71,8 +71,8 @@
     "stepInstructionWithStreet": "Follow the route for about {{distance}}, then {{maneuver}} near {{street}}",
     "approaching": "In {{distance}}, {{maneuver}}",
     "maneuverNow": "Near the point to {{maneuver}}. Check your surroundings first.",
-    "arrivedSpoken": "Near the end of the route to {{destination}}. Check the actual entrance.",
-    "arrivedNearSpoken": "You have reached the end of the route. {{destination}} is about {{distance}} away. The walking route only goes this far. Please ask someone nearby for help to stay safe.",
+    "arrivedSpoken": "You have arrived near {{destination}}. Check the actual entrance. Press the Finish trip button when you are ready.",
+    "arrivedNearSpoken": "You have reached the end of the route. {{destination}} is about {{distance}} away. The walking route only goes this far. Please ask someone nearby for help to stay safe. Press the Finish trip button when you are ready.",
     "arrived": "Near the route endpoint",
     "offRouteSpoken": "Your position is off the route. Stop somewhere safe while a new route is checked.",
     "recalculating": "Calculating a new route",
@@ -153,7 +153,7 @@
   "offline": {
     "banner": "Offline: search and new routes are unavailable. Check your route and surroundings.",
     "lostSpoken": "Offline. Search and new routes are unavailable. Stop somewhere safe if you leave the route.",
-    "restoredSpoken": "Your device is connected to a network. Retry any failed requests.",
+    "restoredSpoken": "Back online. You can search and get routes again.",
     "searchUnavailable": "Search is unavailable while offline"
   },
   "update": {
@@ -204,6 +204,10 @@
     },
     "stepCount_one": "{{count}} step",
     "stepCount_other": "{{count}} steps",
-    "handrail": "with a handrail"
+    "handrail": "with a handrail",
+    "listSeparator": ", ",
+    "listLast": " and ",
+    "stepCountSpoken_one": "{{count}} in total",
+    "stepCountSpoken_other": "{{count}} in total"
   }
 }
