@@ -48,6 +48,19 @@ const OFF_ROUTE_STREAK = 2
 const OFF_ROUTE_MAX_ACCURACY_M = 30
 /** เว้นระยะระหว่างการคำนวณเส้นทางใหม่ เพื่อไม่ให้ยิง OSRM ถี่เกินไป */
 const MIN_RECALC_INTERVAL_MS = 30_000
+/**
+ * ความแม่นยำแย่สุดที่ยังยอมประกาศว่าถึงจุดหมาย (เมตร)
+ *
+ * ต้องเท่ากับเกณฑ์ที่ใช้ตัดสินว่า GPS ดีพอจะนำทาง ไม่ใช่เข้มกว่า
+ * เดิมตั้งไว้ที่ 15 เมตร ซึ่งเข้มกว่าเกณฑ์นำทาง (30 เมตร) เท่าตัว
+ * ผลคือในเมืองที่ความแม่นยำอยู่ราว 20 เมตร ผู้ใช้เดินถึงจุดหมายแล้ว
+ * แต่แอปไม่เคยประกาศว่าถึง ไม่ขึ้นปุ่มจบการเดินทาง และย้ำว่า "อีก 10 เมตรถึงจุดหมาย"
+ * ไปเรื่อยๆ ทางออกเดียวที่เหลือคือปุ่มสีแดงยกเลิก ทั้งที่เดินทางสำเร็จแล้ว
+ *
+ * การประกาศช้ากว่าความจริงเล็กน้อยยังพอรับได้ แต่การไม่ประกาศเลยรับไม่ได้
+ * และส่วนต่างที่เหลือถูกบอกผ่าน arrivalOffset อยู่แล้วว่ายังต้องหาต่ออีกกี่เมตร
+ */
+const ARRIVAL_MAX_ACCURACY_M = 30
 
 /**
  * จัดการวงจรชีวิตของการนำทาง: ขอเส้นทาง -> ติดตามความคืบหน้า -> ถึงจุดหมาย
@@ -176,7 +189,7 @@ export function useNavigation(position: GeoPosition | null, usable = true): UseN
       remainingDuration: result.remainingDuration,
     })
 
-    if (result.hasArrived && position.accuracy <= 15) {
+    if (result.hasArrived && position.accuracy <= ARRIVAL_MAX_ACCURACY_M) {
       setArrivalOffset(result.distanceToDestination)
       setStatus('arrived')
       setProgress(null)

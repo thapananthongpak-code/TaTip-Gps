@@ -22,6 +22,18 @@ const ANNOUNCE_AT_METERS = [8, 20, 50, 100] as const
  */
 const SILENCE_LIMIT_MS = 45_000
 
+/**
+ * ย้ำคำเตือนออกนอกเส้นทางทุกกี่มิลลิวินาที
+ *
+ * ระหว่างที่หลงทาง คำแนะนำรายขั้นตอนถูกปิดไว้ทั้งหมด (ไม่มีทางบอกทางที่ถูกได้
+ * ในเมื่อไม่รู้ว่าผู้ใช้อยู่ตรงไหนของเส้นทาง) และการคำนวณเส้นทางใหม่ถูกจำกัดไว้
+ * ไม่ให้ถี่กว่า 30 วินาที ช่วงนั้นแอปจึงเงียบสนิทหลังเตือนครั้งแรกครั้งเดียว
+ *
+ * สำหรับผู้ใช้ที่มองไม่เห็น ความเงียบไม่ได้แปลว่า "ยังหลงอยู่" แต่แปลว่า
+ * "แอปหยุดทำงานไปแล้วหรือเปล่า" ซึ่งชวนให้เดินต่อทั้งที่ควรหยุดยืนอยู่กับที่
+ */
+const OFF_ROUTE_REPEAT_MS = 20_000
+
 /** สร้างประโยคบอกทางจากขั้นตอนถัดไป */
 function instructionFor(t: TFunction, step: RouteStep, distance: number): string {
   const maneuver = t(`maneuver.${step.maneuver}`)
@@ -56,7 +68,6 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
   const announcedThresholdsRef = useRef(new Set<number>())
   const prevStatusRef = useRef(nav.status)
   const prevErrorRef = useRef<string | null>(null)
-  const prevOffRouteRef = useRef(false)
   const prevRetryRef = useRef(0)
   const lastSpokeAtRef = useRef(0)
 
@@ -180,14 +191,15 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
     }
   }, [enabled, nav.status, nav.destination, nav.arrivalOffset, speak, t])
 
-  // 5) ออกนอกเส้นทาง
+  // 5) ออกนอกเส้นทาง — เตือนทันที แล้วย้ำเป็นระยะจนกว่าจะกลับเข้าเส้นทาง
   useEffect(() => {
-    if (!enabled) return
-    if (nav.isOffRoute && !prevOffRouteRef.current) {
-      speak(t('nav.offRouteSpoken'), { priority: 'critical' })
-    }
-    prevOffRouteRef.current = nav.isOffRoute
-  }, [enabled, nav.isOffRoute, speak, t])
+    if (!enabled || !nav.isOffRoute || nav.suspended) return
+
+    const warn = () => speak(t('nav.offRouteSpoken'), { priority: 'critical' })
+    warn()
+    const timer = setInterval(warn, OFF_ROUTE_REPEAT_MS)
+    return () => clearInterval(timer)
+  }, [enabled, nav.isOffRoute, nav.suspended, speak, t])
 
   // 6) กำลังลองเรียก API ใหม่ — ผู้ใช้ต้องรู้ตอนที่ระบบสะดุด ไม่ใช่ตอนที่ยอมแพ้แล้ว
   useEffect(() => {

@@ -23,6 +23,7 @@ import { useObstacleAlerts } from '@/hooks/useObstacleAlerts'
 import { useObstacleScan } from '@/hooks/useObstacleScan'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useSpeech } from '@/hooks/useSpeech'
+import { useWakeLock } from '@/hooks/useWakeLock'
 import { useWhereAmI } from '@/hooks/useWhereAmI'
 import { speechService } from '@/services'
 import type { Place } from '@/types'
@@ -81,6 +82,13 @@ export default function App() {
 
   const nav = useNavigation(geo.position, usable)
   const active = nav.status !== 'idle' && nav.status !== 'arrived'
+  /*
+   * กันหน้าจอดับตลอดการเดินทาง
+   *
+   * ถ้าไม่กัน เครื่องจะล็อกเองภายในครึ่งนาที แล้ว visibilitychange จะพักการนำทาง
+   * ผู้ใช้ที่มองไม่เห็นจะเดินต่อโดยไม่มีเสียงบอกทางอีกเลย โดยไม่รู้ว่าต้องปลุกจอเอง
+   */
+  useWakeLock(active)
   const where = useWhereAmI(geo.position)
 
   /**
@@ -95,11 +103,16 @@ export default function App() {
   const wasPaused = useRef(false)
   useEffect(() => {
     const paused = active && !usable
-    if (paused !== wasPaused.current) {
-      if (paused) speechService.cancel()
-      speak(t(paused ? 'nav.paused' : 'nav.resumed'), { priority: 'critical' })
-    }
+    if (paused === wasPaused.current) return
     wasPaused.current = paused
+    /*
+     * การเดินทางจบหรือถูกยกเลิกไปแล้ว ไม่ใช่การกลับมาพร้อมใช้งาน
+     * ถ้าไม่ดักไว้ ผู้ใช้ที่กดหยุดตอนสัญญาณหายจะได้ยินว่า "พร้อมให้คำแนะนำอีกครั้ง"
+     * ทั้งที่เพิ่งสั่งหยุดไปเอง ซึ่งชวนให้เข้าใจผิดว่าระบบยังนำทางอยู่
+     */
+    if (!paused && !active) return
+    if (paused) speechService.cancel()
+    speak(t(paused ? 'nav.paused' : 'nav.resumed'), { priority: 'critical' })
   }, [active, usable, speak, t])
 
   useGpsAnnouncer(geo, started && !active)

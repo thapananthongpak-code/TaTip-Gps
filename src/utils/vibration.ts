@@ -11,10 +11,6 @@ export const VIBRATION_PATTERNS = {
   maneuver: [180],
   /** สองจังหวะ — จุดเสี่ยงข้างหน้า (สี่แยก/ถนนใหญ่) */
   hazard: [200, 120, 200],
-  /** สามจังหวะยาว — ส่งสัญญาณขอความช่วยเหลือแล้ว */
-  sos: [400, 150, 400, 150, 400],
-  /** จังหวะถี่ — นับถอยหลังระหว่างกดปุ่ม SOS ค้าง */
-  countdown: [80],
 } as const
 
 export type VibrationPattern = keyof typeof VIBRATION_PATTERNS

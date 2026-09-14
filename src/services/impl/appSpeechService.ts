@@ -50,6 +50,7 @@ export class AppSpeechService implements SpeechService {
     sequence: 0,
     speaking: false,
     usingScreenReader: false,
+    assertive: false,
   }
 
   subscribe = (listener: () => void) => {
@@ -219,6 +220,7 @@ export class AppSpeechService implements SpeechService {
       sequence: this.snapshot.sequence + 1,
       speaking: true,
       usingScreenReader: true,
+      assertive: item.options.priority === 'critical',
     })
     this.timer = setTimeout(() => this.finish(), readerPace(item.text))
   }

@@ -93,7 +93,7 @@
     "paused": "Walking guidance paused: location or audio is not ready. Stop somewhere safe. Check GPS and test audio before continuing.",
     "resumed": "Guidance is available again. Check your surroundings before continuing.",
     "confirmTurn": "Confirm I have passed this turn",
-    "safetyNote": "Use with a cane or guide dog. This app cannot detect vehicles, obstacles or crossing signals, or tell you it is safe to cross. Keep the app visible during use.",
+    "safetyNote": "Use with a cane or guide dog. This app cannot detect vehicles, obstacles or crossing signals, or tell you it is safe to cross. Keep this app in the foreground while walking; switching to another app stops guidance.",
     "finishButton": "Finish trip",
     "finishedSpoken": "Trip finished. Ready to search for a new destination."
   },
