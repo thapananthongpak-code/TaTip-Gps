@@ -112,7 +112,8 @@
     "show": "แสดงแผนที่ประกอบ",
     "hide": "ซ่อนแผนที่",
     "obstacleMarker": "{{label}} เดินไป {{distance}}",
-    "resultMarker": "ผลการค้นหาอันดับ {{index}}: {{name}}"
+    "resultMarker": "ผลการค้นหาอันดับ {{index}}: {{name}}",
+    "unavailable": "แผนที่โหลดไม่ขึ้น การนำทางด้วยเสียงยังใช้งานได้ตามปกติ"
   },
   "actions": {
     "repeatStatus": "พูดสถานะปัจจุบันซ้ำ",

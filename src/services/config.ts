@@ -89,3 +89,34 @@ export const GPS_POOR_ACCURACY_M = 50
 /** กรุงเทพฯ — จุดกึ่งกลางตั้งต้นก่อนได้ตำแหน่งจริง */
 export const DEFAULT_CENTER = { lat: 13.7563, lng: 100.5018 }
 export const DEFAULT_ZOOM = 17
+
+/* ---------- Google Maps Platform ---------- */
+
+/**
+ * คีย์สำหรับ Maps JavaScript API — ตัวนี้อยู่ในเบราว์เซอร์โดยตั้งใจ
+ *
+ * Maps JS ต้องโหลดจากฝั่งไคลเอนต์ ซ่อนคีย์ไม่ได้ตามการออกแบบของ Google
+ * ความปลอดภัยจึงมาจากการจำกัดคีย์ใน Cloud Console แทน:
+ * เว็บให้จำกัดด้วย HTTP referrer, แอป Android ให้จำกัดด้วยชื่อแพ็กเกจ + ลายเซ็น SHA-1
+ * และเปิดสิทธิ์ให้คีย์นี้เฉพาะ "Maps JavaScript API" อย่างเดียว
+ *
+ * ⚠️ ห้ามเอาคีย์นี้ไปใช้กับ Places/Routes/Geocoding — พวกนั้นต้องผ่าน proxy
+ */
+export const GOOGLE_MAPS_BROWSER_KEY = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY ?? ''
+
+/**
+ * ที่อยู่ของ proxy ที่ถือคีย์ฝั่งเซิร์ฟเวอร์
+ *
+ * เว็บบน Vercel ปล่อยว่างได้ เพราะ /api อยู่โดเมนเดียวกัน
+ * แต่แอป Android ที่ห่อด้วย Capacitor ไม่มีเซิร์ฟเวอร์ในตัว ต้องใส่ URL เต็ม
+ * เช่น https://taatip-gps.vercel.app ไม่งั้นคำขอจะวิ่งไปหา https://localhost
+ */
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+
+/**
+ * ใช้ Google หรือใช้ชุดฟรีเดิม
+ *
+ * ตัดสินจากการตั้งค่า ไม่ใช่จากธงเปิด/ปิดที่ต้องจำสองที่
+ * ถ้ายังไม่ได้ใส่คีย์ แอปต้องทำงานได้ด้วยชุดเดิมเสมอ ไม่ใช่ขึ้นจอขาว
+ */
+export const USE_GOOGLE = GOOGLE_MAPS_BROWSER_KEY.length > 0

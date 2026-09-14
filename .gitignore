@@ -37,3 +37,8 @@ android/.gradle/
 android/local.properties
 android/app/src/main/assets/public/
 android/app/src/main/res/xml/config.xml
+
+# ตัวแปรสภาพแวดล้อมที่มีคีย์จริง
+.env
+.env.local
+.env.*.local

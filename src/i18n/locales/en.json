@@ -116,7 +116,8 @@
     "show": "Show supporting map",
     "hide": "Hide map",
     "obstacleMarker": "{{label}} {{distance}} in",
-    "resultMarker": "Search result {{index}}: {{name}}"
+    "resultMarker": "Search result {{index}}: {{name}}",
+    "unavailable": "The map could not load. Voice guidance still works normally."
   },
   "actions": {
     "repeatStatus": "Repeat current status",
