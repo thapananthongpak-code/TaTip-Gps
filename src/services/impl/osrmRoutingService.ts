@@ -205,6 +205,5 @@ async function requestRoute(
     steps,
     origin,
     destination,
-    usedFallbackProfile: false,
   }
 }

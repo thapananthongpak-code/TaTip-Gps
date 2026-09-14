@@ -4,7 +4,7 @@
  * ออกแบบให้ "จำนวนจังหวะ" สื่อความหมายได้โดยไม่ต้องฟังเสียง
  * เผื่อผู้ใช้อยู่ในที่เสียงดังหรือใส่หูฟังฟังอย่างอื่นอยู่
  */
-export const VIBRATION_PATTERNS = {
+const VIBRATION_PATTERNS = {
   /** จังหวะเดียวสั้นๆ — ยืนยันว่าแตะปุ่มติด */
   tap: [40],
   /** จังหวะเดียวยาว — ใกล้ถึงจุดเลี้ยว */
@@ -13,9 +13,9 @@ export const VIBRATION_PATTERNS = {
   hazard: [200, 120, 200],
 } as const
 
-export type VibrationPattern = keyof typeof VIBRATION_PATTERNS
+type VibrationPattern = keyof typeof VIBRATION_PATTERNS
 
-export function isVibrationSupported(): boolean {
+function isVibrationSupported(): boolean {
   return typeof navigator !== 'undefined' && 'vibrate' in navigator
 }
 

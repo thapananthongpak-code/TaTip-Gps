@@ -3,7 +3,7 @@ import { ServiceError } from '@/types'
 // Respect server-wide cooldowns for other calls too, not just this retry loop.
 const cooldowns = new Map<string, number>()
 
-export interface FetchJsonOptions {
+interface FetchJsonOptions {
   signal?: AbortSignal
   timeoutMs?: number
   retries?: number
@@ -11,7 +11,7 @@ export interface FetchJsonOptions {
   /** Schedule EVERY network attempt, including retries, through the provider queue. */
   schedule?: <T>(task: () => Promise<T>, signal?: AbortSignal) => Promise<T>
 }
-export function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
+function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       reject(new ServiceError('ABORTED'))

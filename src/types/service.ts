@@ -1,5 +1,5 @@
 /** โค้ดข้อผิดพลาดกลางของ service ทุกตัว — UI/เสียงแปลผ่าน i18n key `errors.<code>` */
-export type ServiceErrorCode =
+type ServiceErrorCode =
   | 'NETWORK'
   | 'RATE_LIMITED'
   | 'NOT_FOUND'

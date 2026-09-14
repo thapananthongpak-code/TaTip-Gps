@@ -1,11 +1,8 @@
 import { compositeGeocodingService } from './impl/compositeGeocodingService'
-import { googleGeocodingService } from './impl/googleGeocodingService'
-import { googleRoutingService } from './impl/googleRoutingService'
 import { osmMapService } from './impl/osmMapService'
 import { osrmRoutingService } from './impl/osrmRoutingService'
 import { overpassObstacleService } from './impl/overpassObstacleService'
 import { appSpeechService } from './impl/appSpeechService'
-import { USE_GOOGLE } from './config'
 import type {
   GeocodingService,
   MapService,
@@ -27,21 +24,13 @@ export const mapService: MapService = osmMapService
  */
 export const speechService: SpeechService = appSpeechService
 
-/**
- * เลือกผู้ให้บริการจากการตั้งค่า ไม่ใช่จากการแก้โค้ด
- *
- * ตั้งค่าคีย์ไว้ = ใช้ Google, ไม่ได้ตั้ง = ใช้ชุดฟรีเดิมต่อไป
- * สำคัญที่ต้องมีทางถอย เพราะแอปนี้เป็นเครื่องมือที่คนใช้เดินทางจริง
- * ถ้าคีย์หมดอายุ งบหมด หรือยังไม่ได้ตั้งค่า ต้องยังเดินทางได้ ไม่ใช่เปิดมาแล้วใช้ไม่ได้
- */
-export const geocodingService: GeocodingService = USE_GOOGLE
-  ? googleGeocodingService
-  : compositeGeocodingService
+/** ค้นหาด้วย Nominatim ก่อน แล้วถอยไป Photon เมื่อไม่พบอะไรเลย */
+export const geocodingService: GeocodingService = compositeGeocodingService
 
-export const routingService: RoutingService = USE_GOOGLE ? googleRoutingService : osrmRoutingService
+/** เส้นทางเดินเท้าจากอินสแตนซ์ OSRM ที่ติดตั้ง profile เดินเท้าไว้จริง */
+export const routingService: RoutingService = osrmRoutingService
 
 /** ตรวจสิ่งกีดขวางบนเส้นทางจากข้อมูลแผนที่ */
 export const obstacleService: ObstacleService = overpassObstacleService
 
-export type { GeocodingService, MapService, ObstacleService, RoutingService, SpeechService }
 export * from './config'

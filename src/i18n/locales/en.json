@@ -1,7 +1,6 @@
 {
   "app": {
-    "title": "Taa-Thip Navigator",
-    "subtitle": "Voice navigation for people with visual impairment"
+    "title": "Taa-Thip Navigator"
   },
   "language": {
     "switchTo": "Switch to Thai",
@@ -20,14 +19,12 @@
     "acquiringSpoken": "Finding your location. Please wait a moment.",
     "tracking": "Tracking your location",
     "foundSpoken": "Your location has been found.",
-    "accuracyLabel": "Accuracy",
     "accuracyGood": "Good signal",
     "accuracyPoor": "Weak signal",
     "poorAccuracySpoken": "Weak G P S signal. Your position may be off by about {{meters}} meters. Try moving to an open area away from tall buildings.",
     "recoveredSpoken": "G P S signal is accurate again.",
     "staleSpoken": "No G P S update for a while. The position shown may be out of date. Please walk with extra care.",
     "staleLabel": "Signal lost",
-    "lastUpdate": "Last update",
     "justNow": "just now",
     "secondsAgo_one": "{{count}} second ago",
     "secondsAgo_other": "{{count}} seconds ago",
@@ -52,7 +49,6 @@
     "label": "Search for a destination",
     "placeholder": "Type a place name, e.g. Siam Paragon",
     "searching": "Searching",
-    "searchingSpoken": "Searching for places",
     "noResults": "No places found",
     "noResultsSpoken": "No places found. Try a different or shorter name.",
     "resultsSpoken_one": "Found {{count}} place. Tap it to choose your destination.",
@@ -71,7 +67,6 @@
     "calculating": "Calculating your route",
     "calculatingSpoken": "Calculating a walking route. Please wait a moment.",
     "routeReadySpoken": "Route to {{destination}} found. Distance {{distance}}, about {{minutes}} minutes on foot.",
-    "fallbackWarningSpoken": "Warning. This route was calculated for cars because the walking route service is temporarily unavailable. There may be no sidewalk along parts of it. Please walk with extra care.",
     "stepInstruction": "Follow the route for about {{distance}}, then {{maneuver}}",
     "stepInstructionWithStreet": "Follow the route for about {{distance}}, then {{maneuver}} near {{street}}",
     "approaching": "In {{distance}}, {{maneuver}}",
@@ -85,7 +80,6 @@
     "etaLabel": "Estimated time",
     "minutes_one": "{{count}} minute",
     "minutes_other": "{{count}} minutes",
-    "nextStepLabel": "Next step",
     "stopButton": "Stop navigation",
     "stoppedSpoken": "Navigation stopped. You can choose a new destination.",
     "repeatInstruction": "Repeat instruction",
@@ -108,19 +102,12 @@
     "label": "Map showing your current location",
     "youAreHereMarker": "Your location",
     "recenter": "Back to my location",
-    "recenterSpoken": "The map is back on your location",
-    "followingOn": "The map is following your location",
-    "followingOff": "The map has stopped following your location",
-    "zoomIn": "Zoom in",
-    "zoomOut": "Zoom out",
     "show": "Show supporting map",
-    "hide": "Hide map",
     "obstacleMarker": "{{label}} {{distance}} in",
     "resultMarker": "Search result {{index}}: {{name}}",
     "unavailable": "The map could not load. Voice guidance still works normally."
   },
   "actions": {
-    "repeatStatus": "Repeat current status",
     "statusSpoken": "Tracking your location. Accuracy is about {{meters}} meters."
   },
   "units": {
@@ -177,8 +164,7 @@
     "waitUntilStopped": "Update available. Stop navigation before updating."
   },
   "a11y": {
-    "skipToMain": "Skip to main controls",
-    "mainLabel": "Main controls"
+    "skipToMain": "Skip to main controls"
   },
   "obstacle": {
     "title": "Obstacles on the route",

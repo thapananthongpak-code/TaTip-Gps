@@ -15,7 +15,7 @@ function project(point: LatLng, origin: LatLng): { x: number; y: number } {
 }
 
 /** ระยะจากจุดถึงเส้นตรงหนึ่งช่วง (เมตร) */
-export function distanceToSegment(point: LatLng, a: LatLng, b: LatLng): number {
+function distanceToSegment(point: LatLng, a: LatLng, b: LatLng): number {
   const p = project(point, point)
   const pa = project(a, point)
   const pb = project(b, point)

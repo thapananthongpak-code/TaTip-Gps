@@ -106,8 +106,6 @@ main {
 main > * + * {
   margin-top: 1rem;
 }
-.primary-controls,
-.dark .primary-controls,
 select,
 textarea {
   width: 100%;
@@ -125,14 +123,7 @@ textarea {
   color: #f8fafc;
   border-color: #94a3b8;
 }
-.action-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-.action-row > * {
-  flex: 1 1 12rem;
-}
+
 button,
 input,
 select,
@@ -168,8 +159,6 @@ summary {
   .app-header {
     flex-wrap: wrap;
   }
-  .primary-controls,
-  .voice-controls,
   dl {
     grid-template-columns: 1fr !important;
   }
@@ -196,10 +185,6 @@ summary {
 
 /* ---------- ค้นหาสถานที่ และรายงานสิ่งกีดขวาง ---------- */
 
-.search-panel,
-.dark .search-panel,
-.search-panel > * + *,
-.search-panel h2,
 .hint,
 .disclaimer {
   font-size: 0.9rem;
@@ -347,13 +332,6 @@ main > * + * {
   letter-spacing: -0.01em;
 }
 
-/* ---------- แผ่นกดหมวดหมู่ ---------- */
-
-.tile-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-}
 /*
  * แผ่นกดสูง 92px และเรียงสองคอลัมน์ ใหญ่กว่าเกณฑ์ขั้นต่ำของ WCAG (48px) เกือบเท่าตัว
  * เพราะการกดพลาดของผู้ใช้ที่มองไม่เห็น ไม่ใช่แค่ความรำคาญ แต่หมายถึงเดินผิดทาง
@@ -387,15 +365,6 @@ main > * + * {
 .tile:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-.tile-icon {
-  font-size: 1.9rem;
-  line-height: 1;
-}
-.tile-label {
-  font-size: 1rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
 }
 
 /* ---------- ช่องค้นหา ---------- */
@@ -458,19 +427,7 @@ main > * + * {
   background: #1e293b;
   border-color: #94a3b8;
 }
-/* เลขกำกับตรงกับหมุดบนแผนที่ เพื่อให้อ้างถึงรายการเดียวกันได้ */
-.result-index {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 9999px;
-  background: #0b3d80;
-  color: white;
-  font-size: 1.15rem;
-  font-weight: 800;
-}
+
 .result-text {
   min-width: 0;
 }
@@ -501,12 +458,6 @@ main > * + * {
   border-color: #334155;
 }
 
-/* ป้ายกำกับของแต่ละส่วนภายในกล่องเดียวกัน เล็กกว่าหัวข้อกล่องแต่ยังอ่านง่าย */
-.field-label {
-  display: block;
-  font-size: 1.05rem;
-  font-weight: 700;
-}
 .panel .hint {
   margin-top: 0.35rem;
 }

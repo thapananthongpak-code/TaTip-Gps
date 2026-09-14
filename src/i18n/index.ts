@@ -6,10 +6,10 @@ import type { ServiceLanguage } from '@/types'
 import en from './locales/en.json'
 import th from './locales/th.json'
 
-export const SUPPORTED_LANGUAGES = ['th', 'en'] as const
+const SUPPORTED_LANGUAGES = ['th', 'en'] as const
 
 /** คีย์ที่ใช้จำภาษาที่ผู้ใช้เลือกไว้ใน localStorage */
-export const LANGUAGE_STORAGE_KEY = 'taathip.language'
+const LANGUAGE_STORAGE_KEY = 'taathip.language'
 
 void i18n
   .use(LanguageDetector)

@@ -5,11 +5,11 @@ import { distanceToPath, remainingPathDistance } from './geometry'
 /** ถึงจุดหมายเมื่อเข้าใกล้กว่านี้ (เมตร) */
 export const ARRIVAL_RADIUS_M = 25
 /** Minimum displacement beyond a turn before evaluating outgoing-path evidence. */
-export const STEP_ADVANCE_M = 8
+const STEP_ADVANCE_M = 8
 /** ห่างจากเส้นทางเกินนี้ = ออกนอกเส้นทาง (เมตร) */
 export const OFF_ROUTE_M = 40
 
-export interface RouteProgress {
+interface RouteProgress {
   /** ขั้นตอนที่ผู้ใช้กำลังเดินอยู่ */
   stepIndex: number
   /** จุดเลี้ยวถัดไปที่ต้องเตือน */

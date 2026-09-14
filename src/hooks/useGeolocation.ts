@@ -12,7 +12,7 @@ export type GeoStatus =
   /** ผิดพลาดจนใช้งานไม่ได้ */
   | 'error'
 
-export interface UseGeolocationOptions {
+interface UseGeolocationOptions {
   /** ความแม่นยำที่แย่กว่านี้ (เมตร) ถือว่าเชื่อถือไม่ได้ */
   poorAccuracyThreshold?: number
   /** ถ้าไม่ได้ตำแหน่งใหม่เกินเวลานี้ (ms) ถือว่าสัญญาณขาดหาย */
