@@ -1,4 +1,4 @@
-# ตาทิพย์ Navigator (Taa-Thip Navigator)
+# ตาทิพย์ Navigator (Ta Tip Navigator)
 
 PWA ต้นแบบช่วยนำทางด้วยเสียงสำหรับผู้พิการทางสายตา ต่อยอดจากตาทิพย์เครื่องอ่านฉลากยา
 

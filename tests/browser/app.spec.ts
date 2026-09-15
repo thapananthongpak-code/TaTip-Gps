@@ -327,10 +327,10 @@ test('app shell reopens offline after service worker installation', async ({ pag
   await setup(page)
   await page.evaluate(() => navigator.serviceWorker.ready)
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Taa-Thip Navigator' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ta Tip Navigator' })).toBeVisible()
   await context.setOffline(true)
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Taa-Thip Navigator' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ta Tip Navigator' })).toBeVisible()
   await expect(page.getByText(/Offline: search and new routes/)).toBeVisible()
 })
 
@@ -472,7 +472,7 @@ test('obstacle report lists steps found on the route with detail that matters be
 test('the app starts in English and remembers a switch to Thai', async ({ page }) => {
   // ไม่ตั้งภาษาไว้ล่วงหน้า เพื่อดูค่าเริ่มต้นจริงที่ผู้ใช้ใหม่จะเจอ
   await setup(page, { keepLanguage: true })
-  await expect(page.getByRole('heading', { name: 'Taa-Thip Navigator' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ta Tip Navigator' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Switch to Thai' }).click()
   await expect(page.getByRole('heading', { name: 'ตาทิพย์ Navigator' })).toBeVisible()
@@ -552,7 +552,7 @@ test('the page shell is English before React loads, so nothing is announced in T
    * ถ้าเปลือกเป็นไทย ผู้ใช้จะได้ยินไทยตั้งแต่วินาทีที่เปิดลิงก์แม้แอปจะเป็นอังกฤษ
    */
   expect(await page.evaluate(() => document.documentElement.lang)).toBe('en')
-  await expect(page).toHaveTitle(/Taa-Thip/)
+  await expect(page).toHaveTitle(/Ta Tip/)
 
   // เลือกไทยแล้วทั้ง lang และ title ต้องเปลี่ยนตาม
   await page.getByRole('button', { name: 'Switch to Thai' }).click()

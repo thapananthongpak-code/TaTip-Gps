@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Taa-Thip Navigator"
+    "title": "Ta Tip Navigator"
   },
   "language": {
     "switchTo": "Switch to Thai",
@@ -12,7 +12,7 @@
     "body": "GPS provides your location for directions. Searches and route requests send data to external map providers. This app does not record route history. The app speaks directions on its own; if your device has no voice for the chosen language, your screen reader reads them instead.",
     "startButton": "Start and allow location access",
     "startButtonHint": "Tap to allow location access and enable spoken guidance",
-    "spoken": "Welcome to Taa-Thip Navigator. This app needs G P S to guide you by voice. Tap the button in the middle of the screen to allow it."
+    "spoken": "Welcome to Ta Tip Navigator. This app needs G P S to guide you by voice. Tap the button in the middle of the screen to allow it."
   },
   "gps": {
     "acquiring": "Finding your location",
@@ -58,7 +58,7 @@
     "hint": "Type a name, then press Search",
     "submit": "Search",
     "heading": "Where do you want to go?",
-    "welcomeSpoken": "Welcome to Taa-Thip Navigator. Type the name of a place you want to go to, then press Search.",
+    "welcomeSpoken": "Welcome to Ta Tip Navigator. Type the name of a place you want to go to, then press Search.",
     "selectedSpoken": "{{destination}} set as your destination. Calculating the route.",
     "approximate": "No match for \"{{query}}\". These places have similar names",
     "approximateSpoken": "No place named {{query}} was found, but {{count}} places have similar names. Please listen to each name carefully before choosing, as they may not be what you want."

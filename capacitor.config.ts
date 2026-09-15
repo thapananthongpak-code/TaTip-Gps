@@ -9,7 +9,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
  */
 const config: CapacitorConfig = {
   appId: 'com.taathip.navigator',
-  appName: 'Taa-Thip Navigator',
+  appName: 'Ta Tip Navigator',
   webDir: 'dist',
   android: {
     /*
