@@ -57,7 +57,14 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
   const {
     poorAccuracyThreshold = GPS_POOR_ACCURACY_M,
     staleAfterMs = 15000,
-    timeoutMs = 15000,
+    /*
+     * เวลารอตำแหน่งแรกก่อนยอมแพ้
+     *
+     * GPS ที่เพิ่งเปิดเครื่องหรือเพิ่งย้ายที่ ("cold start") ใช้เวลา 30-60 วินาที
+     * แม้อยู่กลางแจ้ง ค่าเดิม 15 วินาทีจึงสั้นเกินไปจนขึ้นว่าหาไม่พบ
+     * ทั้งที่ถ้ารออีกหน่อยก็ได้
+     */
+    timeoutMs = 45000,
   } = options
   const [status, setStatus] = useState<GeoStatus>('idle')
   const [position, setPosition] = useState<GeoPosition | null>(null)
@@ -67,8 +74,11 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
   const watch = useRef<number | null>(null)
   const generation = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  // รู้ว่าได้ตำแหน่งแล้วหรือยัง โดยไม่ต้องรอ setState ซึ่งเป็น async
+  const hasFix = useRef(false)
   const cleanup = useCallback(() => {
     generation.current++
+    hasFix.current = false
     clearTimeout(timer.current)
     if (watch.current !== null) navigator.geolocation?.clearWatch(watch.current)
     watch.current = null
@@ -105,45 +115,76 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
       setStatus('error')
       setIsStale(true)
     }, timeoutMs)
+
+    /** รับตำแหน่งหนึ่งจุด ตรวจความถูกต้อง แล้วบันทึก — ใช้ร่วมกันทั้งสองทาง */
+    const accept = (fix: GeolocationPosition) => {
+      if (id !== generation.current) return
+      const { latitude: lat, longitude: lng, accuracy, heading, speed } = fix.coords
+      if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        Math.abs(lat) > 90 ||
+        Math.abs(lng) > 180 ||
+        !Number.isFinite(accuracy) ||
+        accuracy < 0 ||
+        !Number.isFinite(fix.timestamp) ||
+        fix.timestamp > Date.now() + 5000
+      ) {
+        setError({ code: 'POSITION_UNAVAILABLE' })
+        setIsStale(true)
+        return
+      }
+      hasFix.current = true
+      const next: GeoPosition = { lat, lng, accuracy, heading, speed, timestamp: fix.timestamp }
+      setPosition(next)
+      // ตำแหน่งเดิมที่ส่งซ้ำไม่ใช่ข้อมูลใหม่ ถ้านับด้วยจะทำให้ดูเหมือนหยุดนิ่ง
+      setHistory((prev) =>
+        prev[prev.length - 1]?.timestamp === next.timestamp
+          ? prev
+          : [...prev, next].slice(-HISTORY_SIZE),
+      )
+      setError(null)
+      setStatus('tracking')
+      const age = Date.now() - fix.timestamp
+      setIsStale(age >= staleAfterMs)
+      clearTimeout(timer.current)
+      timer.current = setTimeout(
+        () => {
+          if (id === generation.current) setIsStale(true)
+        },
+        Math.max(0, staleAfterMs - age),
+      )
+    }
+
+    /*
+     * ขอตำแหน่งคร่าวๆ ให้ได้ก่อนหนึ่งจุด แล้วค่อยตามด้วยตำแหน่งที่แม่นยำ
+     *
+     * enableHighAccuracy: false บอกให้เครื่องใช้ WiFi และเสาสัญญาณช่วยเดาได้
+     * ซึ่งเป็นวิธีเดียวที่ได้ผลเมื่ออยู่ในอาคาร เพราะสัญญาณดาวเทียมถูกหลังคาบังเกือบหมด
+     * ตอบกลับภายในไม่กี่วินาที แทนที่จะรอดาวเทียมจนหมดเวลาแล้วขึ้นว่าหาไม่พบ
+     *
+     * ⚠️ ตำแหน่งคร่าวๆ นี้คลาดได้ถึงหลักร้อยเมตร ใช้แค่แสดงบนแผนที่และจัดอันดับ
+     * ผลค้นหาเท่านั้น ส่วนการนำทางยังต้องผ่านเกณฑ์ความแม่นยำเดิมทุกประการ
+     */
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (fix) => {
+          // ทิ้งไปถ้าได้ตำแหน่งที่แม่นยำกว่ามาก่อนแล้ว ห้ามเขียนทับของที่ดีกว่า
+          if (id !== generation.current || hasFix.current) return
+          accept(fix)
+        },
+        () => {
+          // ไม่ตั้ง error เพราะตัวติดตามหลักยังพยายามอยู่ นี่เป็นแค่ทางลัด
+        },
+        { enableHighAccuracy: false, maximumAge: 10000, timeout: 12000 },
+      )
+    } catch {
+      // เบราว์เซอร์บางตัวโยน error ตรงนี้ได้ ปล่อยให้ตัวติดตามหลักทำงานต่อ
+    }
+
     try {
       watch.current = navigator.geolocation.watchPosition(
-        (fix) => {
-          if (id !== generation.current) return
-          const { latitude: lat, longitude: lng, accuracy, heading, speed } = fix.coords
-          if (
-            !Number.isFinite(lat) ||
-            !Number.isFinite(lng) ||
-            Math.abs(lat) > 90 ||
-            Math.abs(lng) > 180 ||
-            !Number.isFinite(accuracy) ||
-            accuracy < 0 ||
-            !Number.isFinite(fix.timestamp) ||
-            fix.timestamp > Date.now() + 5000
-          ) {
-            setError({ code: 'POSITION_UNAVAILABLE' })
-            setIsStale(true)
-            return
-          }
-          const next: GeoPosition = { lat, lng, accuracy, heading, speed, timestamp: fix.timestamp }
-          setPosition(next)
-          // ตำแหน่งเดิมที่ส่งซ้ำไม่ใช่ข้อมูลใหม่ ถ้านับด้วยจะทำให้ดูเหมือนหยุดนิ่ง
-          setHistory((prev) =>
-            prev[prev.length - 1]?.timestamp === next.timestamp
-              ? prev
-              : [...prev, next].slice(-HISTORY_SIZE),
-          )
-          setError(null)
-          setStatus('tracking')
-          const age = Date.now() - fix.timestamp
-          setIsStale(age >= staleAfterMs)
-          clearTimeout(timer.current)
-          timer.current = setTimeout(
-            () => {
-              if (id === generation.current) setIsStale(true)
-            },
-            Math.max(0, staleAfterMs - age),
-          )
-        },
+        accept,
         (failure) => {
           if (id !== generation.current) return
           const code =
@@ -152,6 +193,11 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
               : failure.code === 3
                 ? 'TIMEOUT'
                 : 'POSITION_UNAVAILABLE'
+          /*
+           * ถ้าได้ตำแหน่งคร่าวๆ มาแล้ว การที่ดาวเทียมยังจับไม่ได้ไม่ใช่ความล้มเหลว
+           * ยังมีตำแหน่งให้ใช้อยู่ แค่ยังไม่แม่นพอจะนำทาง ซึ่งแผงสถานะบอกอยู่แล้ว
+           */
+          if (hasFix.current && code !== 'PERMISSION_DENIED') return
           setError({ code })
           setIsStale(true)
           setStatus('error')
