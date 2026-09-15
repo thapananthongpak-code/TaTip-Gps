@@ -461,3 +461,45 @@ main > * + * {
 .panel .hint {
   margin-top: 0.35rem;
 }
+
+/* ---------- ปุ่มส่งเสียงขอความช่วยเหลือ ---------- */
+
+/*
+ * คั่นออกจากปุ่มอื่นด้วยเส้นและระยะห่าง เพราะกดพลาดแล้วเสียงดังขึ้นกลางที่สาธารณะ
+ * ซึ่งสำหรับผู้ใช้ที่มองไม่เห็นคือสถานการณ์ที่แก้ไขลำบากกว่าการกดปุ่มอื่นผิด
+ */
+.alert-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 2px solid #cbd5e1;
+}
+
+.dark .alert-zone {
+  border-top-color: #475569;
+}
+
+.alert-button {
+  width: 100%;
+}
+
+/* กำลังส่งเสียงอยู่ — ต้องต่างจากสถานะปกติอย่างเห็นได้ชัดโดยไม่พึ่งสีอย่างเดียว */
+.alert-button.is-active {
+  outline: 4px solid #fbbf24;
+  outline-offset: 3px;
+  animation: alert-pulse 1s ease-in-out infinite;
+}
+
+@keyframes alert-pulse {
+  50% {
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert-button.is-active {
+    animation: none;
+  }
+}

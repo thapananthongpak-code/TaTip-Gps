@@ -58,7 +58,7 @@
     "hint": "Type a name, then press Search",
     "submit": "Search",
     "heading": "Where do you want to go?",
-    "welcomeSpoken": "Welcome to Ta Tip Navigator. Type the name of a place you want to go to, then press Search.",
+    "welcomeSpoken": "Welcome to Ta Tip Navigator. Type the name of a place you want to go to, then press Search. If you need help, there is a button at the end of the screen that sounds an alert for people nearby.",
     "selectedSpoken": "{{destination}} set as your destination. Calculating the route.",
     "approximate": "No match for \"{{query}}\". These places have similar names",
     "approximateSpoken": "No place named {{query}} was found, but {{count}} places have similar names. Please listen to each name carefully before choosing, as they may not be what you want."
@@ -216,5 +216,13 @@
     "listLast": " and ",
     "stepCountSpoken_one": "{{count}} in total",
     "stepCountSpoken_other": "{{count}} in total"
+  },
+  "alert": {
+    "button": "Sound an alert for help",
+    "stopButton": "Stop the alert sound",
+    "hint": "Plays a loud sound so people nearby can hear you. It does not contact anyone or send your location.",
+    "startedSpoken": "Sounding an alert for help. Press the same button again to stop. The sound stops on its own within one minute.",
+    "stoppedSpoken": "The alert sound has stopped.",
+    "unavailable": "This device cannot play the alert sound"
   }
 }

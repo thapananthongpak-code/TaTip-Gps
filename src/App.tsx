@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AlertButton } from '@/components/AlertButton'
 import { Announcer } from '@/components/Announcer'
 import { BigButton } from '@/components/BigButton'
 import { GpsStatusPanel } from '@/components/GpsStatusPanel'
@@ -368,6 +369,15 @@ export default function App() {
             <BigButton variant="secondary" onClick={() => setFollow(true)}>
               {t('map.recenter')}
             </BigButton>
+
+            {/*
+              วางไว้ท้ายสุดและคั่นด้วยเส้นแบ่ง เพื่อไม่ให้มือไปโดนตอนเอื้อมหาปุ่มอื่น
+              ตำแหน่งท้ายสุดยังทำให้โปรแกรมอ่านหน้าจอพาไปถึงได้ด้วยการกวาดจากท้ายขึ้นมา
+              ซึ่งเป็นท่าที่เร็วที่สุดเมื่อต้องการปุ่มนี้
+            */}
+            <div className="alert-zone">
+              <AlertButton />
+            </div>
           </>
         )}
 
