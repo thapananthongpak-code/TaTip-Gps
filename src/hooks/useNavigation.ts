@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { routingService, speechService } from '@/services'
+import { NAVIGATION_ACCURACY_M, routingService, speechService } from '@/services'
 import { ServiceError } from '@/types'
+import type { ServiceErrorCode } from '@/types'
 import type { GeoPosition, Place, Route, RouteStep } from '@/types'
 import { OFF_ROUTE_M, computeProgress } from '@/utils/navigation'
 
@@ -54,7 +55,7 @@ const OFF_ROUTE_STREAK = 2
  * ถ้า GPS แม่นยำแย่กว่านี้ ไม่ตัดสินว่าออกนอกเส้นทาง
  * เพราะจะกลายเป็นยิงคำนวณเส้นทางใหม่รัวๆ ทั้งที่ผู้ใช้เดินถูกทางอยู่
  */
-const OFF_ROUTE_MAX_ACCURACY_M = 30
+const OFF_ROUTE_MAX_ACCURACY_M = NAVIGATION_ACCURACY_M
 /**
  * ต้องเห็นระยะที่เหลือ "เพิ่มขึ้น" ติดกันกี่ครั้งถึงจะเชื่อว่าเดินผิดทาง
  *
@@ -83,7 +84,7 @@ const MIN_RECALC_INTERVAL_MS = 30_000
  * การประกาศช้ากว่าความจริงเล็กน้อยยังพอรับได้ แต่การไม่ประกาศเลยรับไม่ได้
  * และส่วนต่างที่เหลือถูกบอกผ่าน arrivalOffset อยู่แล้วว่ายังต้องหาต่ออีกกี่เมตร
  */
-const ARRIVAL_MAX_ACCURACY_M = 30
+const ARRIVAL_MAX_ACCURACY_M = NAVIGATION_ACCURACY_M
 
 /**
  * จัดการวงจรชีวิตของการนำทาง: ขอเส้นทาง -> ติดตามความคืบหน้า -> ถึงจุดหมาย
@@ -168,20 +169,36 @@ export function useNavigation(
     }
   }, [])
 
+  /**
+   * ตรวจว่าตำแหน่งตอนนี้พร้อมเริ่มนำทางหรือยัง — คืนรหัสสาเหตุเมื่อยังไม่พร้อม
+   *
+   * เดิมรวมสี่สาเหตุไว้ในเงื่อนไขเดียวแล้วรายงานว่า "ยังไม่ทราบตำแหน่ง" เสมอ
+   * ผู้ใช้ที่เห็นแผงสถานะบอกว่ากำลังติดตามตำแหน่งอยู่ที่ ±68 เมตร
+   * จึงได้ข้อความที่ขัดกับสิ่งที่เห็นตรงหน้า และไม่รู้ว่าต้องทำอะไรต่อ
+   */
+  const readiness = useCallback((): ServiceErrorCode | null => {
+    const origin = positionRef.current
+    if (!origin) return 'NO_POSITION'
+    if (origin.accuracy > NAVIGATION_ACCURACY_M) return 'POSITION_TOO_COARSE'
+    if (Date.now() - origin.timestamp > 15000) return 'NO_POSITION'
+    if (!usable) return 'NO_POSITION'
+    return null
+  }, [usable])
+
   const start = useCallback(
     (place: Place) => {
       setDestination(place)
       setProgress(null)
       setArrivalOffset(null)
-      const origin = positionRef.current
-      if (!origin || !usable || Date.now() - origin.timestamp > 15000 || origin.accuracy > 30) {
-        setError(new ServiceError('NO_POSITION'))
+      const blocked = readiness()
+      if (blocked) {
+        setError(new ServiceError(blocked))
         setStatus('error')
         return
       }
-      void calculate(origin, place, false)
+      void calculate(positionRef.current!, place, false)
     },
-    [calculate, usable],
+    [calculate, readiness],
   )
 
   const stop = useCallback(() => {
@@ -205,11 +222,22 @@ export function useNavigation(
     awayStreakRef.current = 0
   }, [])
 
+  /*
+   * ลองใหม่ต้องใช้เกณฑ์เดียวกับการเริ่ม และต้องรายงานผลเสมอ
+   *
+   * เดิมถ้ายังไม่พร้อมจะ return เงียบๆ ปุ่ม "ลองใหม่" จึงกดแล้วไม่เกิดอะไรขึ้นเลย
+   * ผู้ใช้ที่มองไม่เห็นจะกดซ้ำไปเรื่อยๆ โดยไม่มีทางรู้ว่าระบบได้ยินหรือเปล่า
+   */
   const retry = useCallback(() => {
-    const origin = positionRef.current
-    if (!origin || !destination || !usable) return
-    void calculate(origin, destination, false)
-  }, [calculate, destination, usable])
+    if (!destination) return
+    const blocked = readiness()
+    if (blocked) {
+      setError(new ServiceError(blocked))
+      setStatus('error')
+      return
+    }
+    void calculate(positionRef.current!, destination, false)
+  }, [calculate, destination, readiness])
 
   // ติดตามความคืบหน้าทุกครั้งที่ GPS อัปเดต
   useEffect(() => {

@@ -149,7 +149,9 @@
     "retryingSpoken": "Connection problem. Trying again.",
     "routeFailedSpoken": "The route could not be calculated after several attempts. Navigation has stopped. Please stop somewhere safe and try again.",
     "retryButton": "Try again",
-    "speechUnsupported": "App speech is unavailable in this browser. Use an enabled screen reader and test its announcements before starting."
+    "speechUnsupported": "App speech is unavailable in this browser. Use an enabled screen reader and test its announcements before starting.",
+    "POSITION_TOO_COARSE": "Your location is not precise enough to navigate (needs {{meters}} m or better)",
+    "POSITION_TOO_COARSE_SPOKEN": "Your approximate location is known, but it is not precise enough to navigate safely. It needs to be within {{meters}} meters. Satellite signals are usually blocked by a roof. If you are indoors, please move outside and wait a moment."
   },
   "hazard": {
     "crossroadsSpoken": "Caution. A junction may be ahead. The map cannot check traffic or crossing signals. Do not cross based only on this app.",

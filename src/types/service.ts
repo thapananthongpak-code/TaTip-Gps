@@ -1,13 +1,21 @@
 /** โค้ดข้อผิดพลาดกลางของ service ทุกตัว — UI/เสียงแปลผ่าน i18n key `errors.<code>` */
-type ServiceErrorCode =
+export type ServiceErrorCode =
   | 'NETWORK'
   | 'RATE_LIMITED'
   | 'NOT_FOUND'
   | 'TIMEOUT'
   | 'ABORTED'
   | 'PROVIDER_ERROR'
-  /** ยังไม่มีตำแหน่ง GPS จึงเริ่มคำนวณเส้นทางไม่ได้ */
+  /** ยังไม่มีตำแหน่ง GPS เลย จึงเริ่มคำนวณเส้นทางไม่ได้ */
   | 'NO_POSITION'
+  /**
+   * รู้ตำแหน่งแล้ว แต่ยังไม่แม่นพอจะนำทาง
+   *
+   * ต้องแยกจาก NO_POSITION ให้ขาด เพราะทางแก้ต่างกันคนละเรื่อง
+   * ไม่มีตำแหน่งเลย = รอให้ระบบหาเจอก่อน
+   * ไม่แม่นพอ = ต้องย้ายตัวเองออกไปที่โล่ง ซึ่งรอเฉยๆ ไม่มีวันหาย
+   */
+  | 'POSITION_TOO_COARSE'
   | 'UNKNOWN'
 
 export class ServiceError extends Error {

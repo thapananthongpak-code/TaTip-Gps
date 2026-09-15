@@ -19,6 +19,7 @@ vi.mock('../src/services', () => ({
   geocodingService: { search: mocks.search },
   speechService: { cancel: mocks.cancel },
   SEARCH_DEBOUNCE_MS: 1000,
+  NAVIGATION_ACCURACY_M: 30,
 }))
 const position: GeoPosition = {
   lat: 0,
@@ -77,8 +78,20 @@ it('stopping a route rejects late route and retry callbacks', async () => {
   expect(result.current.route).toBeNull()
   expect(result.current.retryAttempt).toBe(0)
 })
+/*
+ * ไม่ว่าสาเหตุไหน ต้องไม่เริ่มคำนวณเส้นทาง แต่ต้องบอกสาเหตุให้ตรง
+ * เพราะทางแก้ต่างกันคนละเรื่อง: ไม่มีตำแหน่งเลยให้รอ ส่วนไม่แม่นพอต้องย้ายที่
+ */
 it('unreliable or stale GPS cannot start routing', () => {
-  const { result } = renderHook(() => useNavigation({ ...position, accuracy: 80 }, true))
+  const coarse = { ...position, accuracy: 80 }
+  const { result } = renderHook(() => useNavigation(coarse, true))
+  act(() => result.current.start(place))
+  expect(result.current.error?.code).toBe('POSITION_TOO_COARSE')
+  expect(mocks.route).not.toHaveBeenCalled()
+})
+
+it('no position at all still reports NO_POSITION', () => {
+  const { result } = renderHook(() => useNavigation(null, true))
   act(() => result.current.start(place))
   expect(result.current.error?.code).toBe('NO_POSITION')
   expect(mocks.route).not.toHaveBeenCalled()

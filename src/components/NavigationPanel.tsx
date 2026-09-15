@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { currentLanguage } from '@/i18n'
+import { NAVIGATION_ACCURACY_M } from '@/services'
 import type { UseNavigationResult } from '@/hooks/useNavigation'
 import { formatDistance, speakDistance } from '@/utils/format'
 import { ARRIVAL_RADIUS_M } from '@/utils/navigation'
@@ -25,6 +26,8 @@ interface Props {
   onRepeat: () => void
   /** จบการเดินทางเมื่อถึงจุดหมายแล้ว ต่างจากการยกเลิกกลางทาง */
   onFinish: () => void
+  /** ลองคำนวณเส้นทางใหม่ — ต้องบอกผลด้วยเสียงทุกครั้งที่กด */
+  onRetry: () => void
   /**
    * true = ที่พักคำแนะนำเพราะกำลังเคลื่อนที่เร็วกว่าการเดิน ไม่ใช่เพราะสัญญาณไม่ดี
    * ต้องแยกให้ขาด เพราะทางแก้ของสองเรื่องนี้ต่างกันคนละทาง
@@ -33,7 +36,7 @@ interface Props {
 }
 
 /** แผงนำทางระหว่างเดินทาง — คำแนะนำถัดไป ระยะที่เหลือ และปุ่มควบคุม */
-export function NavigationPanel({ nav, onRepeat, onFinish, inVehicle = false }: Props) {
+export function NavigationPanel({ nav, onRepeat, onFinish, onRetry, inVehicle = false }: Props) {
   const { t } = useTranslation()
   const { status, destination, progress, error, isOffRoute, isRecalculating } = nav
 
@@ -46,10 +49,10 @@ export function NavigationPanel({ nav, onRepeat, onFinish, inVehicle = false }: 
         className="border-t-4 border-danger-500 bg-danger-500/10 p-4"
       >
         <p className="text-lg font-bold text-danger-600 dark:text-red-300">
-          {t(`errors.${error.code}`)}
+          {t(`errors.${error.code}`, { meters: NAVIGATION_ACCURACY_M })}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <BigButton variant="danger" onClick={nav.retry} className="flex-1">
+          <BigButton variant="danger" onClick={onRetry} className="flex-1">
             {t('errors.retryButton')}
           </BigButton>
           <BigButton variant="secondary" onClick={nav.stop} className="flex-1">

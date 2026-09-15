@@ -24,7 +24,7 @@ import { useSpeech } from '@/hooks/useSpeech'
 import { useWakeLock } from '@/hooks/useWakeLock'
 import { useWhereAmI } from '@/hooks/useWhereAmI'
 import { currentLanguage } from '@/i18n'
-import { speechService } from '@/services'
+import { NAVIGATION_ACCURACY_M, speechService } from '@/services'
 import type { Place } from '@/types'
 import { speakDistance } from '@/utils/format'
 import { movementFrom } from '@/utils/movement'
@@ -33,9 +33,6 @@ import { vibrate } from '@/utils/vibration'
 
 /** ระยะที่เริ่มสั่นเตือนก่อนถึงจุดเลี้ยว (เมตร) — ตรงกับจังหวะที่เสียงเตือนดัง */
 const MANEUVER_VIBRATION_DISTANCE_M = 20
-
-/** GPS ที่แม่นยำแย่กว่านี้ (เมตร) เชื่อถือไม่ได้พอจะใช้นำทาง */
-const NAVIGATION_ACCURACY_M = 30
 
 /** ตำแหน่งที่เก่ากว่านี้ (มิลลิวินาที) ถือว่าค้าง */
 const POSITION_STALE_MS = 15_000
@@ -258,6 +255,25 @@ export default function App() {
     )
   }, [nav, speak, t])
 
+  /*
+   * ลองคำนวณเส้นทางใหม่ แล้วบอกผลด้วยเสียงทุกครั้งที่กด
+   *
+   * เดิมถ้าตำแหน่งยังไม่พร้อม การกดปุ่มนี้จะไม่เกิดอะไรขึ้นเลยและไม่มีเสียงตอบ
+   * ผู้ใช้ที่มองไม่เห็นจึงกดซ้ำไปเรื่อยๆ โดยไม่รู้ว่าระบบได้ยินหรือเปล่า
+   */
+  const retryNavigation = useCallback(() => {
+    speechService.cancel()
+    nav.retry()
+    const at = geo.position
+    if (!at) {
+      speak(t('errors.NO_POSITION_SPOKEN'), { priority: 'critical' })
+    } else if (at.accuracy > NAVIGATION_ACCURACY_M) {
+      speak(t('errors.POSITION_TOO_COARSE_SPOKEN', { meters: NAVIGATION_ACCURACY_M }), {
+        priority: 'critical',
+      })
+    }
+  }, [nav, geo.position, speak, t])
+
   const stopNavigation = useCallback(() => {
     nav.stop()
     speak(t('nav.stoppedSpoken'), { priority: 'critical' })
@@ -316,6 +332,7 @@ export default function App() {
                   nav={{ ...nav, stop: stopNavigation }}
                   onRepeat={repeat}
                   onFinish={finishTrip}
+                  onRetry={retryNavigation}
                   inVehicle={inVehicle}
                 />
                 {nav.route && (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { UseGeolocationResult } from '@/hooks/useGeolocation'
+import { NAVIGATION_ACCURACY_M } from '@/services'
 import { formatAge, formatDistance } from '@/utils/format'
 import { BigButton } from './BigButton'
 
@@ -33,7 +34,7 @@ export function GpsStatusPanel({ geo }: Props) {
   if (error) {
     return (
       <section aria-label={t('gps.tracking')} className="gps-status is-error">
-        <p className="font-bold">{t(`errors.${error.code}`)}</p>
+        <p className="font-bold">{t(`errors.${error.code}`, { meters: NAVIGATION_ACCURACY_M })}</p>
         <BigButton variant="danger" onClick={geo.retry}>
           {t('errors.retryButton')}
         </BigButton>

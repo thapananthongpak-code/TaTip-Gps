@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { currentLanguage } from '@/i18n'
+import { NAVIGATION_ACCURACY_M } from '@/services'
 import type { RouteStep } from '@/types'
 import { speakDistance } from '@/utils/format'
 import { ARRIVAL_RADIUS_M } from '@/utils/navigation'
@@ -231,7 +232,7 @@ export function useNavigationAnnouncer(nav: UseNavigationResult, enabled: boolea
     if (!enabled) return
     const code = nav.error?.code ?? null
     if (code && code !== prevErrorRef.current) {
-      speak(t(`errors.${code}_SPOKEN`), { priority: 'critical' })
+      speak(t(`errors.${code}_SPOKEN`, { meters: NAVIGATION_ACCURACY_M }), { priority: 'critical' })
     }
     prevErrorRef.current = code
   }, [enabled, nav.error, speak, t])

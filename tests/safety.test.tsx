@@ -306,3 +306,59 @@ it('กลับมาเดินถูกทาง ต้องเลิกเ
   ])
   expect(flags.at(-1)).toBe(false)
 })
+
+/* ---------- แยกสาเหตุที่เริ่มนำทางไม่ได้ ---------- */
+
+/*
+ * เดิมรวมสี่สาเหตุไว้ในเงื่อนไขเดียวแล้วรายงานว่า "ยังไม่ทราบตำแหน่ง" เสมอ
+ * ผู้ใช้ที่เห็นแผงสถานะบอกว่ากำลังติดตามตำแหน่งอยู่ที่ ±68 เมตร
+ * จึงได้ข้อความที่ขัดกับสิ่งที่เห็นตรงหน้า และไม่รู้ว่าต้องออกไปข้างนอก
+ */
+it('รู้ตำแหน่งแล้วแต่ไม่แม่นพอ ต้องบอกสาเหตุที่ตรง ไม่ใช่บอกว่าไม่รู้ตำแหน่ง', async () => {
+  mocks.route.mockResolvedValue(longRoute)
+  const coarse: GeoPosition = { ...along(0), accuracy: 68 }
+  const { result } = renderHook(() => useNavigation(coarse, false))
+
+  act(() => result.current.start(farPlace))
+  await act(() => vi.advanceTimersByTimeAsync(10))
+
+  expect(result.current.error?.code).toBe('POSITION_TOO_COARSE')
+  expect(mocks.route).not.toHaveBeenCalled()
+})
+
+it('ไม่มีตำแหน่งเลย ยังรายงานว่าไม่ทราบตำแหน่งตามเดิม', async () => {
+  const { result } = renderHook(() => useNavigation(null, false))
+  act(() => result.current.start(farPlace))
+  await act(() => vi.advanceTimersByTimeAsync(10))
+  expect(result.current.error?.code).toBe('NO_POSITION')
+})
+
+/*
+ * ปุ่มลองใหม่เคยกดแล้วไม่เกิดอะไรขึ้นเลยเมื่อความแม่นยำยังไม่พอ
+ * เพราะ retry เช็ก usable แล้ว return เงียบๆ
+ * ผู้ใช้ที่มองไม่เห็นจะกดซ้ำไปเรื่อยๆ โดยไม่รู้ว่าระบบได้ยินหรือเปล่า
+ */
+it('กดลองใหม่ขณะความแม่นยำยังไม่พอ ต้องได้สาเหตุกลับมา ไม่ใช่เงียบ', async () => {
+  const coarse: GeoPosition = { ...along(0), accuracy: 68 }
+  const { result } = renderHook(() => useNavigation(coarse, false))
+  act(() => result.current.start(farPlace))
+  await act(() => vi.advanceTimersByTimeAsync(10))
+
+  act(() => result.current.retry())
+  await act(() => vi.advanceTimersByTimeAsync(10))
+
+  expect(result.current.error?.code).toBe('POSITION_TOO_COARSE')
+  expect(result.current.status).toBe('error')
+})
+
+/** ความแม่นยำดีพอแล้วต้องเริ่มนำทางได้ตามปกติ */
+it('ความแม่นยำดีพอ เริ่มนำทางได้', async () => {
+  mocks.route.mockResolvedValue(longRoute)
+  // ต้องสร้างนอกฟังก์ชัน render ไม่งั้นได้อ็อบเจกต์ใหม่ทุกรอบจน effect วนไม่รู้จบ
+  const precise = along(0)
+  const { result } = renderHook(() => useNavigation(precise, true))
+  act(() => result.current.start(farPlace))
+  await act(() => vi.advanceTimersByTimeAsync(10))
+  expect(result.current.error).toBeNull()
+  expect(mocks.route).toHaveBeenCalled()
+})
