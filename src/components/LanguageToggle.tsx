@@ -10,7 +10,9 @@ import { speechService } from '@/services'
  * รายละเอียดที่ตั้งใจทำเพื่อผู้ใช้ที่มองไม่เห็น:
  * - aria-label เขียนด้วย "ภาษาปลายทาง" เสมอ (ตอนใช้ไทยจะอ่านว่า "เปลี่ยนเป็นภาษาอังกฤษ")
  *   ผู้ใช้จึงรู้ว่ากดแล้วจะได้อะไร ไม่ใช่รู้แค่ว่าตอนนี้เป็นภาษาอะไร
- * - lang บนตัวป้ายกำกับไว้ให้ screen reader ออกเสียงชื่อภาษาด้วยสำเนียงที่ถูก
+ * - ป้ายบนปุ่มเขียนด้วยภาษาอังกฤษทั้งสองโหมด ("Thai" กับ "EN") จึงกำกับ lang="en" ไว้คงที่
+ *   ไม่ใช่กำกับตามภาษาปลายทาง ซึ่งจะทำให้เสียงไทยไปอ่านคำว่า "Thai" ผิดสำเนียง
+ *   ถ้าวันหลังเปลี่ยนป้ายเป็นคำไทย ต้องแก้ตรงนี้ด้วย
  * - ยกเลิกข้อความที่ค้างในคิวก่อนประกาศยืนยัน ไม่งั้นจะได้ยินภาษาเก่าต่อจนจบ
  */
 export function LanguageToggle() {
@@ -33,7 +35,7 @@ export function LanguageToggle() {
       aria-label={t('language.switchTo')}
       className="min-h-touch min-w-touch cursor-pointer rounded-xl border-2 border-white/70 px-4 py-2 text-lg font-bold text-white"
     >
-      <span lang={nextLanguage}>{t('language.switchToShort')}</span>
+      <span lang="en">{t('language.switchToShort')}</span>
     </button>
   )
 }
